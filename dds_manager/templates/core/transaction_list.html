@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Список транзакций - ДДС Менеджер{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-list-ul"></i> Список транзакций</h1>
+    <a href="{% url 'transaction_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Добавить транзакцию
+    </a>
+</div>
+
+<!-- Фильтры -->
+<div class="filter-card">
+    <h5 class="mb-3"><i class="bi bi-funnel"></i> Фильтры</h5>
+    <form method="get" class="row g-3">
+        <div class="col-md-2">
+            {{ filter_form.date_from.label_tag }}
+            {{ filter_form.date_from }}
+        </div>
+        <div class="col-md-2">
+            {{ filter_form.date_to.label_tag }}
+            {{ filter_form.date_to }}
+        </div>
+        <div class="col-md-2">
+            {{ filter_form.status.label_tag }}
+            {{ filter_form.status }}
+        </div>
+        <div class="col-md-2">
+            {{ filter_form.type.label_tag }}
+            {{ filter_form.type }}
+        </div>
+        <div class="col-md-2">
+            {{ filter_form.category.label_tag }}
+            {{ filter_form.category }}
+        </div>
+        <div class="col-md-2">
+            {{ filter_form.subcategory.label_tag }}
+            {{ filter_form.subcategory }}
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Применить фильтры
+            </button>
+            <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle"></i> Сбросить
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Таблица транзакций -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-table"></i> Транзакции
+            <span class="badge bg-secondary">{{ transactions.count }}</span>
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Статус</th>
+                            <th>Тип</th>
+                            <th>Категория</th>
+                            <th>Подкатегория</th>
+                            <th class="text-end">Сумма</th>
+                            <th>Комментарий</th>
+                            <th width="120">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.date|date:"d.m.Y" }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ transaction.status.name }}</span>
+                                </td>
+                                <td>
+                                    {% if transaction.type.name == 'Пополнение' %}
+                                        <span class="badge bg-success">{{ transaction.type.name }}</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ transaction.type.name }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.category.name }}</td>
+                                <td>{{ transaction.subcategory.name }}</td>
+                                <td class="text-end">
+                                    <strong>{{ transaction.amount|floatformat:2 }} ₽</strong>
+                                </td>
+                                <td>
+                                    {% if transaction.comment %}
+                                        <span class="text-muted" title="{{ transaction.comment }}">
+                                            {{ transaction.comment|truncatechars:30 }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'transaction_update' transaction.pk %}"
+                                           class="btn btn-outline-primary" title="Редактировать">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'transaction_delete' transaction.pk %}"
+                                           class="btn btn-outline-danger" title="Удалить">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h5 class="text-muted mt-3">Транзакции не найдены</h5>
+                <p class="text-muted">Попробуйте изменить фильтры или создайте первую транзакцию</p>
+                <a href="{% url 'transaction_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Создать транзакцию
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Статистика -->
+{% if transactions %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-arrow-up-circle"></i> Пополнения
+                </h5>
+                <h3>
+                    {% widthratio transactions|length transactions|length 0 as income_count %}
+                    {{ transactions|length }} шт.
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-arrow-down-circle"></i> Списания
+                </h5>
+                <h3>
+                    {{ transactions|length }} шт.
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Удаление {{ object_type }} - ДДС Менеджер{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="lead">Вы уверены, что хотите удалить {{ object_type }} "<strong>{{ object.name }}</strong>"?</p>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Внимание!</strong> Это действие нельзя отменить. 
+                    Если к этому элементу привязаны транзакции, удаление будет невозможно.
+                </div>
+                
+                <form method="post" class="d-flex justify-content-between">
+                    {% csrf_token %}
+                    <a href="{% url 'references_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Отмена
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Да, удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Удаление транзакции - ДДС Менеджер{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="lead">Вы уверены, что хотите удалить эту транзакцию?</p>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6"><strong>Дата:</strong></div>
+                            <div class="col-6">{{ transaction.date|date:"d.m.Y" }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Тип:</strong></div>
+                            <div class="col-6">{{ transaction.type.name }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Категория:</strong></div>
+                            <div class="col-6">{{ transaction.category.name }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Подкатегория:</strong></div>
+                            <div class="col-6">{{ transaction.subcategory.name }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Сумма:</strong></div>
+                            <div class="col-6"><strong>{{ transaction.amount|floatformat:2 }} ₽</strong></div>
+                        </div>
+                        {% if transaction.comment %}
+                        <div class="row">
+                            <div class="col-6"><strong>Комментарий:</strong></div>
+                            <div class="col-6">{{ transaction.comment }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Внимание!</strong> Это действие нельзя отменить.
+                </div>
+                
+                <form method="post" class="d-flex justify-content-between">
+                    {% csrf_token %}
+                    <a href="{% url 'transaction_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Отмена
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Да, удалить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
