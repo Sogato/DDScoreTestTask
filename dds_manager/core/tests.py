@@ -653,3 +653,273 @@ class IntegrationTestCase(TestCase):
         self.assertEqual(transaction.type, self.income_type)
         self.assertEqual(transaction.category, self.income_category)
         self.assertEqual(transaction.subcategory, self.income_subcategory)
+
+
+class StatusCRUDTestCase(TestCase):
+    """Полные тесты для CRUD операций со статусами"""
+
+    def setUp(self):
+        self.client = Client()
+        self.status = Status.objects.create(name='Тестовый статус', slug='test-status')
+
+    def test_status_create_get(self):
+        """Тест GET запроса создания статуса"""
+        response = self.client.get(reverse('status_create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Создание статуса')
+        self.assertContains(response, 'Создать')
+
+    def test_status_create_post_valid(self):
+        """Тест валидного POST запроса создания статуса"""
+        data = {
+            'name': 'Новый статус',
+            'slug': 'new-status'
+        }
+
+        response = self.client.post(reverse('status_create'), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Status.objects.filter(name='Новый статус').exists())
+
+        # Проверяем сообщение об успехе
+        messages_list = list(response.wsgi_request._messages)
+        self.assertTrue(any('успешно создан' in str(m) for m in messages_list))
+
+    def test_status_update_get(self):
+        """Тест GET запроса редактирования статуса"""
+        response = self.client.get(reverse('status_update', args=[self.status.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        # В HTML кавычки экранируются как &quot;
+        self.assertContains(response, f'Редактирование статуса &quot;{self.status.name}&quot;')
+        self.assertContains(response, 'Сохранить')
+
+    def test_status_update_post_valid(self):
+        """Тест валидного POST запроса редактирования статуса"""
+        data = {
+            'name': 'Обновленный статус',
+            'slug': 'updated-status'
+        }
+
+        response = self.client.post(reverse('status_update', args=[self.status.pk]), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.status.refresh_from_db()
+        self.assertEqual(self.status.name, 'Обновленный статус')
+
+    def test_status_delete_get(self):
+        """Тест GET запроса удаления статуса"""
+        response = self.client.get(reverse('status_delete', args=[self.status.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'статус')
+
+    def test_status_delete_post(self):
+        """Тест POST запроса удаления статуса"""
+        status_id = self.status.pk
+
+        response = self.client.post(reverse('status_delete', args=[status_id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Status.objects.filter(pk=status_id).exists())
+
+
+class TypeCRUDTestCase(TestCase):
+    """Полные тесты для CRUD операций с типами"""
+
+    def setUp(self):
+        self.client = Client()
+        self.type = Type.objects.create(name='Тестовый тип', slug='test-type')
+
+    def test_type_create_get(self):
+        """Тест GET запроса создания типа"""
+        response = self.client.get(reverse('type_create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Создание типа')
+
+    def test_type_create_post_valid(self):
+        """Тест валидного POST запроса создания типа"""
+        data = {
+            'name': 'Новый тип',
+            'slug': 'new-type'
+        }
+
+        response = self.client.post(reverse('type_create'), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Type.objects.filter(name='Новый тип').exists())
+
+    def test_type_update_get(self):
+        """Тест GET запроса редактирования типа"""
+        response = self.client.get(reverse('type_update', args=[self.type.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        # В HTML кавычки экранируются как &quot;
+        self.assertContains(response, f'Редактирование типа &quot;{self.type.name}&quot;')
+
+    def test_type_update_post_valid(self):
+        """Тест валидного POST запроса редактирования типа"""
+        data = {
+            'name': 'Обновленный тип',
+            'slug': 'updated-type'
+        }
+
+        response = self.client.post(reverse('type_update', args=[self.type.pk]), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.type.refresh_from_db()
+        self.assertEqual(self.type.name, 'Обновленный тип')
+
+    def test_type_delete_post(self):
+        """Тест POST запроса удаления типа"""
+        type_id = self.type.pk
+
+        response = self.client.post(reverse('type_delete', args=[type_id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Type.objects.filter(pk=type_id).exists())
+
+
+class CategoryCRUDTestCase(TestCase):
+    """Полные тесты для CRUD операций с категориями"""
+
+    def setUp(self):
+        self.client = Client()
+        self.type = Type.objects.create(name='Тестовый тип', slug='test-type')
+        self.category = Category.objects.create(
+            name='Тестовая категория',
+            slug='test-category',
+            type=self.type
+        )
+
+    def test_category_create_get(self):
+        """Тест GET запроса создания категории"""
+        response = self.client.get(reverse('category_create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Создание категории')
+
+    def test_category_create_post_valid(self):
+        """Тест валидного POST запроса создания категории"""
+        data = {
+            'name': 'Новая категория',
+            'slug': 'new-category',
+            'type': self.type.id
+        }
+
+        response = self.client.post(reverse('category_create'), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Category.objects.filter(name='Новая категория').exists())
+
+    def test_category_update_get(self):
+        """Тест GET запроса редактирования категории"""
+        response = self.client.get(reverse('category_update', args=[self.category.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        # В HTML кавычки экранируются как &quot;
+        self.assertContains(response, f'Редактирование категории &quot;{self.category.name}&quot;')
+
+    def test_category_delete_post(self):
+        """Тест POST запроса удаления категории"""
+        category_id = self.category.pk
+
+        response = self.client.post(reverse('category_delete', args=[category_id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Category.objects.filter(pk=category_id).exists())
+
+
+class SubcategoryCRUDTestCase(TestCase):
+    """Полные тесты для CRUD операций с подкategориями"""
+
+    def setUp(self):
+        self.client = Client()
+        self.type = Type.objects.create(name='Тестовый тип', slug='test-type')
+        self.category = Category.objects.create(
+            name='Тестовая категория',
+            slug='test-category',
+            type=self.type
+        )
+        self.subcategory = Subcategory.objects.create(
+            name='Тестовая подкатегория',
+            slug='test-subcategory',
+            category=self.category
+        )
+
+    def test_subcategory_create_get(self):
+        """Тест GET запроса создания подкатегории"""
+        response = self.client.get(reverse('subcategory_create'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Создание подкатегории')
+
+    def test_subcategory_create_post_valid(self):
+        """Тест валидного POST запроса создания подкатегории"""
+        data = {
+            'name': 'Новая подкатегория',
+            'slug': 'new-subcategory',
+            'category': self.category.id
+        }
+
+        response = self.client.post(reverse('subcategory_create'), data)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Subcategory.objects.filter(name='Новая подкатегория').exists())
+
+    def test_subcategory_update_get(self):
+        """Тест GET запроса редактирования подкатегории"""
+        response = self.client.get(reverse('subcategory_update', args=[self.subcategory.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        # В HTML кавычки экранируются как &quot;
+        self.assertContains(response, f'Редактирование подкатегории &quot;{self.subcategory.name}&quot;')
+
+    def test_subcategory_delete_post(self):
+        """Тест POST запроса удаления подкатегории"""
+        subcategory_id = self.subcategory.pk
+
+        response = self.client.post(reverse('subcategory_delete', args=[subcategory_id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Subcategory.objects.filter(pk=subcategory_id).exists())
+
+
+class ErrorHandlingTestCase(TestCase):
+    """Тесты обработки ошибок"""
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_transaction_update_404(self):
+        """Тест 404 при редактировании несуществующей транзакции"""
+        response = self.client.get(reverse('transaction_update', args=[999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_transaction_delete_404(self):
+        """Тест 404 при удалении несуществующей транзакции"""
+        response = self.client.get(reverse('transaction_delete', args=[999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_status_update_404(self):
+        """Тест 404 при редактировании несуществующего статуса"""
+        response = self.client.get(reverse('status_update', args=[999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_ajax_load_categories_empty_type(self):
+        """Тест AJAX загрузки категорий без параметра type_id"""
+        response = self.client.get(reverse('ajax_load_categories'))
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data), 0)
+
+    def test_ajax_load_subcategories_empty_category(self):
+        """Тест AJAX загрузки подкатегорий без параметра category_id"""
+        response = self.client.get(reverse('ajax_load_subcategories'))
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data), 0)
