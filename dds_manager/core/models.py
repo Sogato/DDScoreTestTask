@@ -132,14 +132,32 @@ class Transaction(models.Model):
         Валидация зависимостей: подкатегория должна принадлежать выбранной категории,
         категория — выбранному типу.
         """
-        if self.subcategory and self.subcategory.category != self.category:
-            raise ValidationError(
-                {"subcategory": "Подкатегория должна принадлежать выбранной категории."}
-            )
-        if self.category and self.category.type != self.type:
-            raise ValidationError(
-                {"category": "Категория должна принадлежать выбранному типу."}
-            )
+        errors = {}
+
+        # Проверяем, что категория принадлежит выбранному типу
+        if self.category_id and self.type_id:
+            try:
+                # Проверяем через ID, чтобы избежать лишних запросов к БД
+                from .models import Category
+                category = Category.objects.select_related('type').get(id=self.category_id)
+                if category.type_id != self.type_id:
+                    errors['category'] = 'Категория должна принадлежать выбранному типу.'
+            except Category.DoesNotExist:
+                errors['category'] = 'Выбранная категория не существует.'
+
+        # Проверяем, что подкатегория принадлежит выбранной категории
+        if self.subcategory_id and self.category_id:
+            try:
+                # Проверяем через ID, чтобы избежать лишних запросов к БД
+                from .models import Subcategory
+                subcategory = Subcategory.objects.select_related('category').get(id=self.subcategory_id)
+                if subcategory.category_id != self.category_id:
+                    errors['subcategory'] = 'Подкатегория должна принадлежать выбранной категории.'
+            except Subcategory.DoesNotExist:
+                errors['subcategory'] = 'Выбранная подкатегория не существует.'
+
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return f"{self.date} - {self.amount} руб. ({self.type})"

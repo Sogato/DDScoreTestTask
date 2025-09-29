@@ -102,9 +102,10 @@ class TransactionForm(forms.ModelForm):
                     category=self.instance.category
                 )
         else:
-            # Для новой транзакции показываем пустые списки
-            self.fields['category'].queryset = Category.objects.none()
-            self.fields['subcategory'].queryset = Subcategory.objects.none()
+            # Для новой транзакции показываем все варианты
+            # AJAX будет фильтровать их динамически
+            self.fields['category'].queryset = Category.objects.all()
+            self.fields['subcategory'].queryset = Subcategory.objects.all()
 
     def clean(self):
         cleaned_data = super().clean()
