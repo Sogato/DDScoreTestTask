@@ -140,10 +140,7 @@
                 <h5 class="card-title">
                     <i class="bi bi-arrow-up-circle"></i> Пополнения
                 </h5>
-                <h3>
-                    {% widthratio transactions|length transactions|length 0 as income_count %}
-                    {{ transactions|length }} шт.
-                </h3>
+                <h3>{{ income_count }} шт.</h3>
             </div>
         </div>
     </div>
@@ -153,9 +150,7 @@
                 <h5 class="card-title">
                     <i class="bi bi-arrow-down-circle"></i> Списания
                 </h5>
-                <h3>
-                    {{ transactions|length }} шт.
-                </h3>
+                <h3>{{ expense_count }} шт.</h3>
             </div>
         </div>
     </div>

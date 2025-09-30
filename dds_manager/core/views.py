@@ -42,9 +42,15 @@ def transaction_list(request):
     # Сортируем по дате (новые сначала)
     transactions = transactions.order_by('-date', '-id')
 
+    # Подсчет статистики по типам
+    income_count = transactions.filter(type__slug='popolnenie').count()
+    expense_count = transactions.filter(type__slug='spisanie').count()
+
     context = {
         'transactions': transactions,
         'filter_form': filter_form,
+        'income_count': income_count,
+        'expense_count': expense_count,
     }
 
     return render(request, 'core/transaction_list.html', context)

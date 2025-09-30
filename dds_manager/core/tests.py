@@ -178,8 +178,8 @@ class FormsTestCase(TestCase):
 
         form = TransactionForm(data=form_data)
         self.assertFalse(form.is_valid())
-        self.assertIn('Подкатегория должна принадлежать выбранной категории',
-                      str(form.errors))
+        # Проверяем, что есть ошибка в поле subcategory
+        self.assertIn('subcategory', form.errors)
 
     def test_transaction_form_missing_required_fields(self):
         """Тест формы с отсутствующими обязательными полями"""
@@ -373,6 +373,37 @@ class ViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.transaction1.refresh_from_db()
         self.assertEqual(self.transaction1.amount, Decimal('1500.00'))
+
+    def test_transaction_update_change_category(self):
+        """Тест изменения категории и подкатегории при редактировании"""
+        # Создаем альтернативную категорию и подкатегорию
+        alt_category = Category.objects.create(
+            name='Другая категория', slug='other', type=self.income_type
+        )
+        alt_subcategory = Subcategory.objects.create(
+            name='Другая подкатегория', slug='other-sub', category=alt_category
+        )
+
+        # Меняем категорию и подкатегорию на другие
+        data = {
+            'date': date.today(),
+            'status': self.status.id,
+            'type': self.income_type.id,
+            'category': alt_category.id,  # НОВАЯ категория
+            'subcategory': alt_subcategory.id,  # НОВАЯ подкатегория
+            'amount': '1000.00',
+            'comment': 'Изменены категории'
+        }
+
+        response = self.client.post(
+            reverse('transaction_update', args=[self.transaction1.pk]),
+            data
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.transaction1.refresh_from_db()
+        self.assertEqual(self.transaction1.category, alt_category)
+        self.assertEqual(self.transaction1.subcategory, alt_subcategory)
 
     def test_transaction_delete_view(self):
         """Тест страницы удаления транзакции"""

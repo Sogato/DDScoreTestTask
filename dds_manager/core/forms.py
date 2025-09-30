@@ -89,23 +89,64 @@ class TransactionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Фиксим формат даты для HTML5 input type="date"
+        self.fields['date'].widget.format = '%Y-%m-%d'
+        self.fields['date'].input_formats = ['%Y-%m-%d']
+
         # Если это редактирование существующей транзакции
         if self.instance.pk:
-            # Фильтруем категории по выбранному типу
-            if self.instance.type:
-                self.fields['category'].queryset = Category.objects.filter(
-                    type=self.instance.type
-                )
-            # Фильтруем подкатегории по выбранной категории
-            if self.instance.category:
-                self.fields['subcategory'].queryset = Subcategory.objects.filter(
-                    category=self.instance.category
-                )
+            # Если есть POST данные (пользователь отправил форму), используем их
+            if self.data:
+                try:
+                    type_id = int(self.data.get('type'))
+                    self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
+
+                    category_id = self.data.get('category')
+                    if category_id:
+                        category_id = int(category_id)
+                        self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
+                    else:
+                        self.fields['subcategory'].queryset = Subcategory.objects.none()
+                except (ValueError, TypeError, KeyError):
+                    # Если данные некорректны, используем старые значения из instance
+                    if self.instance.type:
+                        self.fields['category'].queryset = Category.objects.filter(
+                            type=self.instance.type
+                        )
+                    if self.instance.category:
+                        self.fields['subcategory'].queryset = Subcategory.objects.filter(
+                            category=self.instance.category
+                        )
+            else:
+                # GET запрос - показываем форму со старыми значениями
+                if self.instance.type:
+                    self.fields['category'].queryset = Category.objects.filter(
+                        type=self.instance.type
+                    )
+                if self.instance.category:
+                    self.fields['subcategory'].queryset = Subcategory.objects.filter(
+                        category=self.instance.category
+                    )
         else:
-            # Для новой транзакции показываем все варианты
-            # AJAX будет фильтровать их динамически
-            self.fields['category'].queryset = Category.objects.all()
-            self.fields['subcategory'].queryset = Subcategory.objects.all()
+            # Для новой транзакции
+            if self.data:
+                try:
+                    type_id = int(self.data.get('type'))
+                    self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
+
+                    category_id = self.data.get('category')
+                    if category_id:
+                        category_id = int(category_id)
+                        self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
+                    else:
+                        self.fields['subcategory'].queryset = Subcategory.objects.none()
+                except (ValueError, TypeError, KeyError):
+                    self.fields['category'].queryset = Category.objects.none()
+                    self.fields['subcategory'].queryset = Subcategory.objects.none()
+            else:
+                # GET запрос для создания - пустые querysets
+                self.fields['category'].queryset = Category.objects.none()
+                self.fields['subcategory'].queryset = Subcategory.objects.none()
 
     def clean(self):
         cleaned_data = super().clean()
