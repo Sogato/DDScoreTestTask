@@ -505,7 +505,7 @@ class ReferenceCRUDTestCase(TestCase):
         }
 
         response = self.client.post(
-            reverse('status_update', args=[self.status.pk]),
+            reverse('status_update', kwargs={'slug': self.status.slug}),
             data
         )
 
@@ -515,14 +515,14 @@ class ReferenceCRUDTestCase(TestCase):
 
     def test_status_delete(self):
         """Тест удаления статуса"""
-        status_id = self.status.pk
+        status_slug = self.status.slug
 
         response = self.client.post(
-            reverse('status_delete', args=[status_id])
+            reverse('status_delete', kwargs={'slug': status_slug})
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(Status.objects.filter(pk=status_id).exists())
+        self.assertFalse(Status.objects.filter(slug=status_slug).exists())
 
     def test_category_create_with_type(self):
         """Тест создания категории с привязкой к типу"""
@@ -688,7 +688,7 @@ class StatusCRUDTestCase(TestCase):
 
     def test_status_update_get(self):
         """Тест GET запроса редактирования статуса"""
-        response = self.client.get(reverse('status_update', args=[self.status.pk]))
+        response = self.client.get(reverse('status_update', kwargs={'slug': self.status.slug}))
 
         self.assertEqual(response.status_code, 200)
         # В HTML кавычки экранируются как &quot;
@@ -702,7 +702,7 @@ class StatusCRUDTestCase(TestCase):
             'slug': 'updated-status'
         }
 
-        response = self.client.post(reverse('status_update', args=[self.status.pk]), data)
+        response = self.client.post(reverse('status_update', kwargs={'slug': self.status.slug}), data)
 
         self.assertEqual(response.status_code, 302)
         self.status.refresh_from_db()
@@ -710,19 +710,19 @@ class StatusCRUDTestCase(TestCase):
 
     def test_status_delete_get(self):
         """Тест GET запроса удаления статуса"""
-        response = self.client.get(reverse('status_delete', args=[self.status.pk]))
+        response = self.client.get(reverse('status_delete', kwargs={'slug': self.status.slug}))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'статус')
 
     def test_status_delete_post(self):
         """Тест POST запроса удаления статуса"""
-        status_id = self.status.pk
+        status_slug = self.status.slug
 
-        response = self.client.post(reverse('status_delete', args=[status_id]))
+        response = self.client.post(reverse('status_delete', kwargs={'slug': status_slug}))
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(Status.objects.filter(pk=status_id).exists())
+        self.assertFalse(Status.objects.filter(slug=status_slug).exists())
 
 
 class TypeCRUDTestCase(TestCase):
@@ -753,7 +753,7 @@ class TypeCRUDTestCase(TestCase):
 
     def test_type_update_get(self):
         """Тест GET запроса редактирования типа"""
-        response = self.client.get(reverse('type_update', args=[self.type.pk]))
+        response = self.client.get(reverse('type_update', kwargs={'slug': self.type.slug}))
 
         self.assertEqual(response.status_code, 200)
         # В HTML кавычки экранируются как &quot;
@@ -766,7 +766,7 @@ class TypeCRUDTestCase(TestCase):
             'slug': 'updated-type'
         }
 
-        response = self.client.post(reverse('type_update', args=[self.type.pk]), data)
+        response = self.client.post(reverse('type_update', kwargs={'slug': self.type.slug}), data)
 
         self.assertEqual(response.status_code, 302)
         self.type.refresh_from_db()
@@ -774,12 +774,12 @@ class TypeCRUDTestCase(TestCase):
 
     def test_type_delete_post(self):
         """Тест POST запроса удаления типа"""
-        type_id = self.type.pk
+        type_slug = self.type.slug
 
-        response = self.client.post(reverse('type_delete', args=[type_id]))
+        response = self.client.post(reverse('type_delete', kwargs={'slug': type_slug}))
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(Type.objects.filter(pk=type_id).exists())
+        self.assertFalse(Type.objects.filter(slug=type_slug).exists())
 
 
 class CategoryCRUDTestCase(TestCase):
@@ -816,7 +816,7 @@ class CategoryCRUDTestCase(TestCase):
 
     def test_category_update_get(self):
         """Тест GET запроса редактирования категории"""
-        response = self.client.get(reverse('category_update', args=[self.category.pk]))
+        response = self.client.get(reverse('category_update', kwargs={'slug': self.category.slug}))
 
         self.assertEqual(response.status_code, 200)
         # В HTML кавычки экранируются как &quot;
@@ -824,12 +824,12 @@ class CategoryCRUDTestCase(TestCase):
 
     def test_category_delete_post(self):
         """Тест POST запроса удаления категории"""
-        category_id = self.category.pk
+        category_slug = self.category.slug
 
-        response = self.client.post(reverse('category_delete', args=[category_id]))
+        response = self.client.post(reverse('category_delete', kwargs={'slug': category_slug}))
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(Category.objects.filter(pk=category_id).exists())
+        self.assertFalse(Category.objects.filter(slug=category_slug).exists())
 
 
 class SubcategoryCRUDTestCase(TestCase):
@@ -871,7 +871,7 @@ class SubcategoryCRUDTestCase(TestCase):
 
     def test_subcategory_update_get(self):
         """Тест GET запроса редактирования подкатегории"""
-        response = self.client.get(reverse('subcategory_update', args=[self.subcategory.pk]))
+        response = self.client.get(reverse('subcategory_update', kwargs={'slug': self.subcategory.slug}))
 
         self.assertEqual(response.status_code, 200)
         # В HTML кавычки экранируются как &quot;
@@ -879,12 +879,12 @@ class SubcategoryCRUDTestCase(TestCase):
 
     def test_subcategory_delete_post(self):
         """Тест POST запроса удаления подкатегории"""
-        subcategory_id = self.subcategory.pk
+        subcategory_slug = self.subcategory.slug
 
-        response = self.client.post(reverse('subcategory_delete', args=[subcategory_id]))
+        response = self.client.post(reverse('subcategory_delete', kwargs={'slug': subcategory_slug}))
 
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(Subcategory.objects.filter(pk=subcategory_id).exists())
+        self.assertFalse(Subcategory.objects.filter(slug=subcategory_slug).exists())
 
 
 class ErrorHandlingTestCase(TestCase):
@@ -905,7 +905,7 @@ class ErrorHandlingTestCase(TestCase):
 
     def test_status_update_404(self):
         """Тест 404 при редактировании несуществующего статуса"""
-        response = self.client.get(reverse('status_update', args=[999]))
+        response = self.client.get(reverse('status_update', kwargs={'slug': 'nonexistent'}))
         self.assertEqual(response.status_code, 404)
 
     def test_ajax_load_categories_empty_type(self):
