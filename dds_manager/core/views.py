@@ -164,6 +164,8 @@ class StatusUpdateView(UpdateView):
     form_class = StatusForm
     template_name = 'core/reference_form.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -180,6 +182,8 @@ class StatusDeleteView(DeleteView):
     model = Status
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -214,6 +218,8 @@ class TypeUpdateView(UpdateView):
     form_class = TypeForm
     template_name = 'core/reference_form.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -230,6 +236,8 @@ class TypeDeleteView(DeleteView):
     model = Type
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -264,6 +272,8 @@ class CategoryUpdateView(UpdateView):
     form_class = CategoryForm
     template_name = 'core/reference_form.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -280,6 +290,8 @@ class CategoryDeleteView(DeleteView):
     model = Category
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -314,6 +326,8 @@ class SubcategoryUpdateView(UpdateView):
     form_class = SubcategoryForm
     template_name = 'core/reference_form.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -330,6 +344,8 @@ class SubcategoryDeleteView(DeleteView):
     model = Subcategory
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
+    slug_field = 'slug'
+    slug_url_kwarg = 'slug'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
