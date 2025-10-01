@@ -22,11 +22,11 @@
                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>{{ status.name }}</span>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'status_update' status.pk %}" 
+                                    <a href="{% url 'status_update' slug=status.slug %}"
                                        class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{% url 'status_delete' status.pk %}" 
+                                    <a href="{% url 'status_delete' slug=status.slug %}"
                                        class="btn btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </a>
@@ -59,11 +59,11 @@
                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                 <span>{{ type.name }}</span>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'type_update' type.pk %}" 
+                                    <a href="{% url 'type_update' slug=type.slug %}"
                                        class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{% url 'type_delete' type.pk %}" 
+                                    <a href="{% url 'type_delete' slug=type.slug %}"
                                        class="btn btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </a>
@@ -101,11 +101,11 @@
                                     <small class="text-muted">Тип: {{ category.type.name }}</small>
                                 </div>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'category_update' category.pk %}" 
+                                    <a href="{% url 'category_update' slug=category.slug %}"
                                        class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{% url 'category_delete' category.pk %}" 
+                                    <a href="{% url 'category_delete' slug=category.slug %}"
                                        class="btn btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </a>
@@ -141,11 +141,11 @@
                                     <small class="text-muted">Категория: {{ subcategory.category.name }}</small>
                                 </div>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'subcategory_update' subcategory.pk %}" 
+                                    <a href="{% url 'subcategory_update' slug=subcategory.slug %}"
                                        class="btn btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{% url 'subcategory_delete' subcategory.pk %}" 
+                                    <a href="{% url 'subcategory_delete' slug=subcategory.slug %}"
                                        class="btn btn-outline-danger">
                                         <i class="bi bi-trash"></i>
                                     </a>

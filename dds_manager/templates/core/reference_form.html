@@ -22,7 +22,18 @@
                                 {{ field.label }}
                                 {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
                             </label>
-                            {{ field }}
+
+                            {% if field.name == 'slug' %}
+                                <div class="input-group">
+                                    {{ field }}
+                                    <button type="button" class="btn btn-outline-secondary" id="regenerate-slug" title="Сгенерировать заново">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+
                             {% if field.errors %}
                                 <div class="text-danger small">
                                     {% for error in field.errors %}{{ error }}{% endfor %}
@@ -30,6 +41,10 @@
                             {% endif %}
                             {% if field.help_text %}
                                 <div class="form-text">{{ field.help_text }}</div>
+                            {% elif field.name == 'slug' %}
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i> Заполняется автоматически на основе названия
+                                </div>
                             {% endif %}
                         </div>
                     {% endfor %}
@@ -47,4 +62,68 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Функция транслитерации русских букв в латиницу
+    function transliterate(text) {
+        var rus = "А-а-Б-б-В-в-Ґ-ґ-Г-г-Д-д-Е-е-Ё-ё-Є-є-Ж-ж-З-з-И-и-І-і-Ї-ї-Й-й-К-к-Л-л-М-м-Н-н-О-о-П-п-Р-р-С-с-Т-т-У-у-Ф-ф-Х-х-Ц-ц-Ч-ч-Ш-ш-Щ-щ-Ъ-ъ-Ы-ы-Ь-ь-Э-э-Ю-ю-Я-я".split("-");
+        var eng = "A-a-B-b-V-v-G-g-G-g-D-d-E-e-E-e-E-e-ZH-zh-Z-z-I-i-I-i-I-i-J-j-K-k-L-l-M-m-N-n-O-o-P-p-R-r-S-s-T-t-U-u-F-f-H-h-TS-ts-CH-ch-SH-sh-SCH-sch---Y-y---E-e-YU-yu-YA-ya".split("-");
+
+        for (var i = 0; i < rus.length; i++) {
+            text = text.split(rus[i]).join(eng[i]);
+        }
+
+        return text;
+    }
+
+    // Функция преобразования текста в slug
+    function textToSlug(text) {
+        // Транслитерация
+        text = transliterate(text);
+
+        // Приведение к нижнему регистру
+        text = text.toLowerCase();
+
+        // Замена пробелов и недопустимых символов на дефисы
+        text = text.replace(/[^a-z0-9]+/g, '-');
+
+        // Удаление дефисов в начале и конце
+        text = text.replace(/^-+|-+$/g, '');
+
+        return text;
+    }
+
+    var $nameField = $('#id_name');
+    var $slugField = $('#id_slug');
+    var manuallyEdited = false;
+
+    // Если slug уже заполнен (редактирование), считаем что он был отредактирован вручную
+    if ($slugField.val()) {
+        manuallyEdited = true;
+    }
+
+    // Отслеживаем ручное редактирование slug
+    $slugField.on('input', function() {
+        manuallyEdited = true;
+    });
+
+    // Автозаполнение slug при вводе в поле name
+    $nameField.on('input', function() {
+        if (!manuallyEdited) {
+            var slugValue = textToSlug($(this).val());
+            $slugField.val(slugValue);
+        }
+    });
+
+    // Обработчик кнопки для сброса и повторной генерации slug
+    $('#regenerate-slug').on('click', function() {
+        manuallyEdited = false;
+        var slugValue = textToSlug($nameField.val());
+        $slugField.val(slugValue);
+    });
+});
+</script>
 {% endblock %}
