@@ -116,7 +116,7 @@ class Transaction(models.Model):
         verbose_name="Подкатегория",
     )
     amount = models.DecimalField(
-        max_digits=10,
+        max_digits=15,
         decimal_places=2,
         verbose_name="Сумма",
         help_text="Сумма в рублях.",

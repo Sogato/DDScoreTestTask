@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load humanize %}
+
 {% block title %}Удаление транзакции - ДДС Менеджер{% endblock %}
 
 {% block content %}
@@ -34,7 +36,7 @@
                         </div>
                         <div class="row">
                             <div class="col-6"><strong>Сумма:</strong></div>
-                            <div class="col-6"><strong>{{ transaction.amount|floatformat:2 }} ₽</strong></div>
+                            <div class="col-6"><strong>{{ transaction.amount|floatformat:-2|intcomma }}&nbsp;₽</strong></div>
                         </div>
                         {% if transaction.comment %}
                         <div class="row">
