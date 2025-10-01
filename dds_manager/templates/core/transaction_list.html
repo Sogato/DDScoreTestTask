@@ -13,30 +13,48 @@
 <!-- Фильтры -->
 <div class="filter-card">
     <h5 class="mb-3"><i class="bi bi-funnel"></i> Фильтры</h5>
-    <form method="get" class="row g-3">
+    <form method="get" class="row g-3" id="filterForm">
         <div class="col-md-2">
-            {{ filter_form.date_from.label_tag }}
+            <label for="{{ filter_form.date_from.id_for_label }}" class="form-label">
+                <i class="bi bi-calendar-event text-primary"></i> {{ filter_form.date_from.label }}
+            </label>
             {{ filter_form.date_from }}
         </div>
         <div class="col-md-2">
-            {{ filter_form.date_to.label_tag }}
+            <label for="{{ filter_form.date_to.id_for_label }}" class="form-label">
+                <i class="bi bi-calendar-check text-primary"></i> {{ filter_form.date_to.label }}
+            </label>
             {{ filter_form.date_to }}
         </div>
         <div class="col-md-2">
-            {{ filter_form.status.label_tag }}
+            <label for="{{ filter_form.status.id_for_label }}" class="form-label">
+                <i class="bi bi-tag text-info"></i> {{ filter_form.status.label }}
+            </label>
             {{ filter_form.status }}
         </div>
         <div class="col-md-2">
-            {{ filter_form.type.label_tag }}
+            <label for="filter_type" class="form-label">
+                <i class="bi bi-layers text-primary"></i> Тип
+            </label>
             {{ filter_form.type }}
         </div>
         <div class="col-md-2">
-            {{ filter_form.category.label_tag }}
+            <label for="filter_category" class="form-label">
+                <i class="bi bi-folder text-success"></i> Категория
+            </label>
             {{ filter_form.category }}
+            <small class="text-muted d-block mt-1">
+                <i class="bi bi-arrow-left"></i> Зависит от типа
+            </small>
         </div>
         <div class="col-md-2">
-            {{ filter_form.subcategory.label_tag }}
+            <label for="filter_subcategory" class="form-label">
+                <i class="bi bi-folder2 text-warning"></i> Подкатегория
+            </label>
             {{ filter_form.subcategory }}
+            <small class="text-muted d-block mt-1">
+                <i class="bi bi-arrow-left"></i> Зависит от категории
+            </small>
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">
@@ -51,7 +69,7 @@
 
 <!-- Таблица транзакций -->
 <div class="card">
-    <div class="card-header">
+    <div class="card-header bg-light">
         <h5 class="mb-0">
             <i class="bi bi-table"></i> Транзакции
             <span class="badge bg-secondary">{{ transactions.count }}</span>
@@ -157,4 +175,118 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    var $filterType = $("#filter_type");
+    var $filterCategory = $("#filter_category");
+    var $filterSubcategory = $("#filter_subcategory");
+
+    // Сохраняем текущие выбранные значения (для восстановления при загрузке)
+    var initialType = $filterType.val();
+    var initialCategory = "{{ request.GET.category|default:'' }}";
+    var initialSubcategory = "{{ request.GET.subcategory|default:'' }}";
+
+    // Функция для обновления состояния селекта
+    function updateSelectState($select, disabled, placeholder) {
+        if (disabled) {
+            $select.prop('disabled', true);
+            $select.addClass('select-disabled');
+            $select.html('<option value="">' + placeholder + '</option>');
+        } else {
+            $select.prop('disabled', false);
+            $select.removeClass('select-disabled');
+        }
+    }
+
+    // Обновление категорий при изменении типа
+    $filterType.change(function() {
+        var typeId = $(this).val();
+
+        // Сбрасываем зависимые поля
+        updateSelectState($filterCategory, true, 'Сначала выберите тип');
+        updateSelectState($filterSubcategory, true, 'Сначала выберите категорию');
+
+        if (typeId) {
+            $.ajax({
+                url: "{% url 'ajax_load_categories' %}",
+                data: { 'type_id': typeId },
+                success: function(data) {
+                    var options = '<option value="">Все категории</option>';
+                    $.each(data, function(index, item) {
+                        options += '<option value="' + item.id + '">' + item.name + '</option>';
+                    });
+                    $filterCategory.html(options);
+                    updateSelectState($filterCategory, false, '');
+                },
+                error: function() {
+                    updateSelectState($filterCategory, true, 'Ошибка загрузки');
+                }
+            });
+        }
+    });
+
+    // Обновление подкатегорий при изменении категории
+    $filterCategory.change(function() {
+        var categoryId = $(this).val();
+
+        // Сбрасываем подкатегории
+        updateSelectState($filterSubcategory, true, 'Сначала выберите категорию');
+
+        if (categoryId) {
+            $.ajax({
+                url: "{% url 'ajax_load_subcategories' %}",
+                data: { 'category_id': categoryId },
+                success: function(data) {
+                    var options = '<option value="">Все подкатегории</option>';
+                    $.each(data, function(index, item) {
+                        options += '<option value="' + item.id + '">' + item.name + '</option>';
+                    });
+                    $filterSubcategory.html(options);
+                    updateSelectState($filterSubcategory, false, '');
+                },
+                error: function() {
+                    updateSelectState($filterSubcategory, true, 'Ошибка загрузки');
+                }
+            });
+        }
+    });
+
+    // Если фильтры были применены, восстанавливаем зависимости
+    if (initialType) {
+        $.ajax({
+            url: "{% url 'ajax_load_categories' %}",
+            data: { 'type_id': initialType },
+            success: function(data) {
+                var options = '<option value="">Все категории</option>';
+                $.each(data, function(index, item) {
+                    var selected = item.id == initialCategory ? ' selected' : '';
+                    options += '<option value="' + item.id + '"' + selected + '>' + item.name + '</option>';
+                });
+                $filterCategory.html(options);
+                updateSelectState($filterCategory, false, '');
+
+                // Если была выбрана категория, загружаем подкатегории
+                if (initialCategory) {
+                    $.ajax({
+                        url: "{% url 'ajax_load_subcategories' %}",
+                        data: { 'category_id': initialCategory },
+                        success: function(data) {
+                            var options = '<option value="">Все подкатегории</option>';
+                            $.each(data, function(index, item) {
+                                var selected = item.id == initialSubcategory ? ' selected' : '';
+                                options += '<option value="' + item.id + '"' + selected + '>' + item.name + '</option>';
+                            });
+                            $filterSubcategory.html(options);
+                            updateSelectState($filterSubcategory, false, '');
+                        }
+                    });
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

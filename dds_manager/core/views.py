@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from .models import Transaction, Status, Type, Category, Subcategory
 from .forms import (
     TransactionForm, TransactionFilterForm, StatusForm,
@@ -196,9 +197,19 @@ class StatusDeleteView(DeleteView):
         context['object_type'] = 'статус'
         return context
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Статус успешно удален!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        try:
+            result = super().form_valid(form)
+            messages.success(self.request, 'Статус успешно удален!')
+            return result
+        except ProtectedError:
+            messages.error(
+                self.request,
+                f'Невозможно удалить статус "{self.object.name}", '
+                f'так как он используется в существующих транзакциях. '
+                f'Сначала удалите или измените все связанные транзакции.'
+            )
+            return redirect('references_list')
 
 
 # Type CRUD
@@ -250,9 +261,19 @@ class TypeDeleteView(DeleteView):
         context['object_type'] = 'тип'
         return context
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Тип успешно удален!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        try:
+            result = super().form_valid(form)
+            messages.success(self.request, 'Тип успешно удален!')
+            return result
+        except ProtectedError:
+            messages.error(
+                self.request,
+                f'Невозможно удалить тип "{self.object.name}", '
+                f'так как он используется в категориях или транзакциях. '
+                f'Сначала удалите или измените все связанные записи.'
+            )
+            return redirect('references_list')
 
 
 # Category CRUD
@@ -304,9 +325,19 @@ class CategoryDeleteView(DeleteView):
         context['object_type'] = 'категорию'
         return context
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Категория успешно удалена!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        try:
+            result = super().form_valid(form)
+            messages.success(self.request, 'Категория успешно удалена!')
+            return result
+        except ProtectedError:
+            messages.error(
+                self.request,
+                f'Невозможно удалить категорию "{self.object.name}", '
+                f'так как она используется в подкатегориях или транзакциях. '
+                f'Сначала удалите или измените все связанные записи.'
+            )
+            return redirect('references_list')
 
 
 # Subcategory CRUD
@@ -358,6 +389,16 @@ class SubcategoryDeleteView(DeleteView):
         context['object_type'] = 'подкатегорию'
         return context
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Подкатегория успешно удалена!')
-        return super().delete(request, *args, **kwargs)
+    def form_valid(self, form):
+        try:
+            result = super().form_valid(form)
+            messages.success(self.request, 'Подкатегория успешно удалена!')
+            return result
+        except ProtectedError:
+            messages.error(
+                self.request,
+                f'Невозможно удалить подкатегорию "{self.object.name}", '
+                f'так как она используется в существующих транзакциях. '
+                f'Сначала удалите или измените все связанные транзакции.'
+            )
+            return redirect('references_list')

@@ -32,23 +32,66 @@ class TransactionFilterForm(forms.Form):
         queryset=Type.objects.all(),
         required=False,
         empty_label="Все типы",
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'filter_type'
+        }),
         label="Тип"
     )
     category = forms.ModelChoiceField(
         queryset=Category.objects.all(),
         required=False,
-        empty_label="Все категории",
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Сначала выберите тип",
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'filter_category',
+            'disabled': 'disabled'
+        }),
         label="Категория"
     )
     subcategory = forms.ModelChoiceField(
         queryset=Subcategory.objects.all(),
         required=False,
-        empty_label="Все подкатегории",
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Сначала выберите категорию",
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'id': 'filter_subcategory',
+            'disabled': 'disabled'
+        }),
         label="Подкатегория"
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Если форма заполняется с GET параметрами
+        if self.data:
+            try:
+                type_id = self.data.get('type')
+                if type_id:
+                    type_id = int(type_id)
+                    self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
+                    self.fields['category'].empty_label = "Все категории"
+                    self.fields['category'].widget.attrs.pop('disabled', None)
+
+                    category_id = self.data.get('category')
+                    if category_id:
+                        category_id = int(category_id)
+                        self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
+                        self.fields['subcategory'].empty_label = "Все подкатегории"
+                        self.fields['subcategory'].widget.attrs.pop('disabled', None)
+                    else:
+                        self.fields['subcategory'].queryset = Subcategory.objects.none()
+                else:
+                    self.fields['category'].queryset = Category.objects.none()
+                    self.fields['subcategory'].queryset = Subcategory.objects.none()
+            except (ValueError, TypeError):
+                self.fields['category'].queryset = Category.objects.none()
+                self.fields['subcategory'].queryset = Subcategory.objects.none()
+        else:
+            # Для пустой формы (первая загрузка)
+            self.fields['category'].queryset = Category.objects.none()
+            self.fields['subcategory'].queryset = Subcategory.objects.none()
 
 
 class TransactionForm(forms.ModelForm):
@@ -93,18 +136,24 @@ class TransactionForm(forms.ModelForm):
         self.fields['date'].widget.format = '%Y-%m-%d'
         self.fields['date'].input_formats = ['%Y-%m-%d']
 
+        # Изменяем empty_label для зависимых полей
+        self.fields['category'].empty_label = "Сначала выберите тип"
+        self.fields['subcategory'].empty_label = "Сначала выберите категорию"
+
         # Если это редактирование существующей транзакции
         if self.instance.pk:
-            # Если есть POST данные (пользователь отправил форму), используем их
+            # Если есть POST данные (пользователь отправил форму)
             if self.data:
                 try:
                     type_id = int(self.data.get('type'))
                     self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
+                    self.fields['category'].empty_label = "---------"
 
                     category_id = self.data.get('category')
                     if category_id:
                         category_id = int(category_id)
                         self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
+                        self.fields['subcategory'].empty_label = "---------"
                     else:
                         self.fields['subcategory'].queryset = Subcategory.objects.none()
                 except (ValueError, TypeError, KeyError):
@@ -113,31 +162,37 @@ class TransactionForm(forms.ModelForm):
                         self.fields['category'].queryset = Category.objects.filter(
                             type=self.instance.type
                         )
+                        self.fields['category'].empty_label = "---------"
                     if self.instance.category:
                         self.fields['subcategory'].queryset = Subcategory.objects.filter(
                             category=self.instance.category
                         )
+                        self.fields['subcategory'].empty_label = "---------"
             else:
                 # GET запрос - показываем форму со старыми значениями
                 if self.instance.type:
                     self.fields['category'].queryset = Category.objects.filter(
                         type=self.instance.type
                     )
+                    self.fields['category'].empty_label = "---------"
                 if self.instance.category:
                     self.fields['subcategory'].queryset = Subcategory.objects.filter(
                         category=self.instance.category
                     )
+                    self.fields['subcategory'].empty_label = "---------"
         else:
             # Для новой транзакции
             if self.data:
                 try:
                     type_id = int(self.data.get('type'))
                     self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
+                    self.fields['category'].empty_label = "---------"
 
                     category_id = self.data.get('category')
                     if category_id:
                         category_id = int(category_id)
                         self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
+                        self.fields['subcategory'].empty_label = "---------"
                     else:
                         self.fields['subcategory'].queryset = Subcategory.objects.none()
                 except (ValueError, TypeError, KeyError):
