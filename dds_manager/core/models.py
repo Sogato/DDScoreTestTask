@@ -5,8 +5,10 @@ from django.core.exceptions import ValidationError
 
 class Status(models.Model):
     """
-    Модель для справочника статусов (например, Бизнес, Личное, Налог).
-    Поддерживает расширение списка.
+    Справочник статусов транзакций (Бизнес, Личное, Налог и т.д.).
+
+    Используется для категоризации транзакций по назначению.
+    Список статусов может расширяться пользователем.
     """
     name = models.CharField(max_length=50, unique=True, verbose_name="Название статуса")
     slug = models.SlugField(max_length=50, unique=True, verbose_name="Слаг")
@@ -21,8 +23,10 @@ class Status(models.Model):
 
 class Type(models.Model):
     """
-    Модель для справочника типов (например, Пополнение, Списание).
-    Поддерживает расширение списка.
+    Справочник типов операций (Пополнение, Списание).
+
+    Определяет направление денежного потока.
+    Категории привязываются к конкретным типам.
     """
     name = models.CharField(max_length=50, unique=True, verbose_name="Название типа")
     slug = models.SlugField(max_length=50, unique=True, verbose_name="Слаг")
@@ -37,8 +41,10 @@ class Type(models.Model):
 
 class Category(models.Model):
     """
-    Модель для категорий (например, Инфраструктура, Маркетинг).
-    Привязана к типу (например, Маркетинг относится к Списанию).
+    Справочник категорий транзакций (Инфраструктура, Маркетинг и т.д.).
+
+    Категория обязательно привязана к типу операции.
+    Например, категория "Маркетинг" может относиться только к типу "Списание".
     """
     name = models.CharField(max_length=100, verbose_name="Название категории")
     slug = models.SlugField(max_length=100, unique=True, verbose_name="Слаг")
@@ -55,13 +61,16 @@ class Category(models.Model):
     class Meta:
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
-        unique_together = ["name", "type"]  # Уникальность имени в рамках типа
+        # Одно название категории может использоваться для разных типов
+        unique_together = ["name", "type"]
 
 
 class Subcategory(models.Model):
     """
-    Модель для подкатегорий (например, VPS, Proxy для Инфраструктуры).
-    Привязана к категории.
+    Справочник подкатегорий (VPS, Proxy, Farpost, Avito и т.д.).
+
+    Подкатегория привязана к конкретной категории для детализации учета.
+    Например, подкатегории "VPS" и "Proxy" относятся к категории "Инфраструктура".
     """
     name = models.CharField(max_length=100, verbose_name="Название подкатегории")
     slug = models.SlugField(max_length=100, unique=True, verbose_name="Слаг")
@@ -78,13 +87,16 @@ class Subcategory(models.Model):
     class Meta:
         verbose_name = "Подкатегория"
         verbose_name_plural = "Подкатегории"
-        unique_together = ["name", "category"]  # Уникальность имени в рамках категории
+        # Одно название подкатегории может использоваться для разных категорий
+        unique_together = ["name", "category"]
 
 
 class Transaction(models.Model):
     """
-    Модель для записи о движении денежных средств (ДДС).
-    Содержит дату, статус, тип, категорию, подкатегорию, сумму и комментарий.
+    Запись о движении денежных средств (ДДС).
+
+    Основная модель приложения. Хранит информацию о денежной операции
+    с привязкой к статусу, типу, категории и подкатегории.
     """
     date = models.DateField(
         default=timezone.now,
@@ -129,27 +141,29 @@ class Transaction(models.Model):
 
     def clean(self):
         """
-        Валидация зависимостей: подкатегория должна принадлежать выбранной категории,
-        категория — выбранному типу.
+        Валидация иерархических зависимостей между сущностями.
+
+        Проверяет:
+        - Категория должна принадлежать выбранному типу
+        - Подкатегория должна принадлежать выбранной категории
+
+        Raises:
+            ValidationError: Если нарушены зависимости между сущностями
         """
         errors = {}
 
-        # Проверяем, что категория принадлежит выбранному типу
         if self.category_id and self.type_id:
             try:
-                # Проверяем через ID, чтобы избежать лишних запросов к БД
-                from .models import Category
+                # Используем select_related для минимизации запросов к БД
                 category = Category.objects.select_related('type').get(id=self.category_id)
                 if category.type_id != self.type_id:
                     errors['category'] = 'Категория должна принадлежать выбранному типу.'
             except Category.DoesNotExist:
                 errors['category'] = 'Выбранная категория не существует.'
 
-        # Проверяем, что подкатегория принадлежит выбранной категории
         if self.subcategory_id and self.category_id:
             try:
-                # Проверяем через ID, чтобы избежать лишних запросов к БД
-                from .models import Subcategory
+                # Используем select_related для минимизации запросов к БД
                 subcategory = Subcategory.objects.select_related('category').get(id=self.subcategory_id)
                 if subcategory.category_id != self.category_id:
                     errors['subcategory'] = 'Подкатегория должна принадлежать выбранной категории.'

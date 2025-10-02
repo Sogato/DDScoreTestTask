@@ -13,7 +13,18 @@ from .forms import (
 
 
 def transaction_list(request):
-    """Главная страница со списком транзакций и фильтрацией"""
+    """
+    Главная страница со списком транзакций и фильтрацией.
+
+    Отображает все транзакции с возможностью фильтрации по:
+    - периоду дат (дата с/по)
+    - статусу
+    - типу операции
+    - категории
+    - подкатегории
+
+    Также выводит статистику по количеству пополнений и списаний.
+    """
     transactions = Transaction.objects.select_related(
         'status', 'type', 'category', 'subcategory'
     ).all()
@@ -21,7 +32,6 @@ def transaction_list(request):
     filter_form = TransactionFilterForm(request.GET)
 
     if filter_form.is_valid():
-        # Применяем фильтры
         if filter_form.cleaned_data.get('date_from'):
             transactions = transactions.filter(date__gte=filter_form.cleaned_data['date_from'])
 
@@ -40,10 +50,9 @@ def transaction_list(request):
         if filter_form.cleaned_data.get('subcategory'):
             transactions = transactions.filter(subcategory=filter_form.cleaned_data['subcategory'])
 
-    # Сортируем по дате (новые сначала)
     transactions = transactions.order_by('-date', '-id')
 
-    # Подсчет статистики по типам
+    # Подсчет статистики (используется slug для независимости от названий типов)
     income_count = transactions.filter(type__slug='popolnenie').count()
     expense_count = transactions.filter(type__slug='spisanie').count()
 
@@ -58,11 +67,16 @@ def transaction_list(request):
 
 
 def transaction_create(request):
-    """Создание новой транзакции"""
+    """
+    Создание новой транзакции.
+
+    GET: отображает форму создания
+    POST: сохраняет новую транзакцию и перенаправляет на список
+    """
     if request.method == 'POST':
         form = TransactionForm(request.POST)
         if form.is_valid():
-            transaction = form.save()
+            form.save()
             messages.success(request, 'Транзакция успешно создана!')
             return redirect('transaction_list')
     else:
@@ -78,7 +92,12 @@ def transaction_create(request):
 
 
 def transaction_update(request, pk):
-    """Редактирование транзакции"""
+    """
+    Редактирование существующей транзакции.
+
+    GET: отображает форму с текущими данными транзакции
+    POST: сохраняет изменения и перенаправляет на список
+    """
     transaction = get_object_or_404(Transaction, pk=pk)
 
     if request.method == 'POST':
@@ -101,7 +120,12 @@ def transaction_update(request, pk):
 
 
 def transaction_delete(request, pk):
-    """Удаление транзакции"""
+    """
+    Удаление транзакции с подтверждением.
+
+    GET: отображает страницу подтверждения удаления
+    POST: удаляет транзакцию и перенаправляет на список
+    """
     transaction = get_object_or_404(Transaction, pk=pk)
 
     if request.method == 'POST':
@@ -116,9 +140,16 @@ def transaction_delete(request, pk):
     return render(request, 'core/transaction_confirm_delete.html', context)
 
 
-# AJAX views для зависимых селектов
 def load_categories(request):
-    """AJAX: загрузка категорий по типу"""
+    """
+    AJAX endpoint для загрузки категорий, привязанных к выбранному типу.
+
+    Query параметры:
+        type_id: ID типа операции
+
+    Returns:
+        JsonResponse: список категорий в формате [{"id": 1, "name": "Название"}, ...]
+    """
     type_id = request.GET.get('type_id')
     categories = Category.objects.filter(type_id=type_id).order_by('name')
 
@@ -127,7 +158,15 @@ def load_categories(request):
 
 
 def load_subcategories(request):
-    """AJAX: загрузка подкатегорий по категории"""
+    """
+    AJAX endpoint для загрузки подкатегорий, привязанных к выбранной категории.
+
+    Query параметры:
+        category_id: ID категории
+
+    Returns:
+        JsonResponse: список подкатегорий в формате [{"id": 1, "name": "Название"}, ...]
+    """
     category_id = request.GET.get('category_id')
     subcategories = Subcategory.objects.filter(category_id=category_id).order_by('name')
 
@@ -135,9 +174,16 @@ def load_subcategories(request):
     return JsonResponse(data, safe=False)
 
 
-# Views для управления справочниками
 def references_list(request):
-    """Страница управления справочниками"""
+    """
+    Страница управления справочниками.
+
+    Отображает все справочники системы:
+    - Статусы
+    - Типы операций
+    - Категории (с привязкой к типам)
+    - Подкатегории (с привязкой к категориям)
+    """
     context = {
         'statuses': Status.objects.all(),
         'types': Type.objects.all(),
@@ -148,8 +194,11 @@ def references_list(request):
     return render(request, 'core/references_list.html', context)
 
 
-# Status CRUD
+# ==================== CRUD для справочника "Статусы" ====================
+
 class StatusCreateView(CreateView):
+    """Создание нового статуса."""
+
     model = Status
     form_class = StatusForm
     template_name = 'core/reference_form.html'
@@ -167,6 +216,8 @@ class StatusCreateView(CreateView):
 
 
 class StatusUpdateView(UpdateView):
+    """Редактирование существующего статуса."""
+
     model = Status
     form_class = StatusForm
     template_name = 'core/reference_form.html'
@@ -186,6 +237,8 @@ class StatusUpdateView(UpdateView):
 
 
 class StatusDeleteView(DeleteView):
+    """Удаление статуса с проверкой на использование в транзакциях."""
+
     model = Status
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
@@ -212,8 +265,11 @@ class StatusDeleteView(DeleteView):
             return redirect('references_list')
 
 
-# Type CRUD
+# ==================== CRUD для справочника "Типы" ====================
+
 class TypeCreateView(CreateView):
+    """Создание нового типа операции."""
+
     model = Type
     form_class = TypeForm
     template_name = 'core/reference_form.html'
@@ -231,6 +287,8 @@ class TypeCreateView(CreateView):
 
 
 class TypeUpdateView(UpdateView):
+    """Редактирование существующего типа операции."""
+
     model = Type
     form_class = TypeForm
     template_name = 'core/reference_form.html'
@@ -250,6 +308,8 @@ class TypeUpdateView(UpdateView):
 
 
 class TypeDeleteView(DeleteView):
+    """Удаление типа с проверкой на использование в категориях и транзакциях."""
+
     model = Type
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
@@ -276,8 +336,11 @@ class TypeDeleteView(DeleteView):
             return redirect('references_list')
 
 
-# Category CRUD
+# ==================== CRUD для справочника "Категории" ====================
+
 class CategoryCreateView(CreateView):
+    """Создание новой категории."""
+
     model = Category
     form_class = CategoryForm
     template_name = 'core/reference_form.html'
@@ -295,6 +358,8 @@ class CategoryCreateView(CreateView):
 
 
 class CategoryUpdateView(UpdateView):
+    """Редактирование существующей категории."""
+
     model = Category
     form_class = CategoryForm
     template_name = 'core/reference_form.html'
@@ -314,6 +379,8 @@ class CategoryUpdateView(UpdateView):
 
 
 class CategoryDeleteView(DeleteView):
+    """Удаление категории с проверкой на использование в подкатегориях и транзакциях."""
+
     model = Category
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')
@@ -340,8 +407,11 @@ class CategoryDeleteView(DeleteView):
             return redirect('references_list')
 
 
-# Subcategory CRUD
+# ==================== CRUD для справочника "Подкатегории" ====================
+
 class SubcategoryCreateView(CreateView):
+    """Создание новой подкатегории."""
+
     model = Subcategory
     form_class = SubcategoryForm
     template_name = 'core/reference_form.html'
@@ -359,6 +429,8 @@ class SubcategoryCreateView(CreateView):
 
 
 class SubcategoryUpdateView(UpdateView):
+    """Редактирование существующей подкатегории."""
+
     model = Subcategory
     form_class = SubcategoryForm
     template_name = 'core/reference_form.html'
@@ -378,6 +450,8 @@ class SubcategoryUpdateView(UpdateView):
 
 
 class SubcategoryDeleteView(DeleteView):
+    """Удаление подкатегории с проверкой на использование в транзакциях."""
+
     model = Subcategory
     template_name = 'core/reference_confirm_delete.html'
     success_url = reverse_lazy('references_list')

@@ -8,23 +8,17 @@ from unidecode import unidecode
 
 from core.models import Status, Type, Category, Subcategory, Transaction
 
-# ============================================================================
-# КОНСТАНТЫ ДЛЯ НАСТРОЙКИ
-# ============================================================================
+# ==================== Параметры генерации данных ====================
 
-# Параметры создания данных
-DEFAULT_TRANSACTIONS_COUNT = 200 # Количество транзакций
+DEFAULT_TRANSACTIONS_COUNT = 200  # Количество транзакций
 TRANSACTIONS_DATE_RANGE_DAYS = 365  # За какой период создавать транзакции
 
-# Распределение типов транзакций (в процентах)
-INCOME_PERCENTAGE = 30  # Процент доходных операций
-EXPENSE_PERCENTAGE = 70  # Процент расходных операций
+# Распределение типов операций (%)
+INCOME_PERCENTAGE = 50
+EXPENSE_PERCENTAGE = 50
 
-# Вероятность создания пустого комментария (в долях от 0 до 1)
-EMPTY_COMMENT_PROBABILITY = 0.2
-
-# Частота вывода прогресса (каждые N транзакций)
-PROGRESS_REPORT_INTERVAL = 50
+EMPTY_COMMENT_PROBABILITY = 0.2  # Вероятность создания пустого комментария (в долях от 0 до 1)
+PROGRESS_REPORT_INTERVAL = 50  # Частота вывода прогресса (каждые N транзакций)
 
 # Диапазоны сумм для разных типов операций (в рублях)
 AMOUNT_RANGES = {
@@ -69,7 +63,8 @@ EXPENSE_COMMENT_TEMPLATES = [
 # Данные для генерации комментариев
 PLACES = ['Москву', 'Новосибирск', 'Санкт-Петербург', 'Екатеринбург', 'Краснодар', 'Сочи']
 
-# Справочные данные
+# ==================== Справочные данные ====================
+
 STATUS_NAMES = [
     'Бизнес',
     'Личное',
@@ -119,87 +114,85 @@ SUBCATEGORIES = {
     'Здоровье и медицина': ['Врачи и анализы', 'Лекарства', 'Спортивное питание']
 }
 
-# Маппинг категорий на статусы с весами (вероятностями)
+# Маппинг категорий на статусы с весами для weighted random choice
 # Формат: 'Категория': {'Статус': вес, ...}
-# Чем больше вес, тем чаще категория будет в этом статусе
 CATEGORY_STATUS_MAPPING = {
-    # ДОХОДЫ
+    # Доходы
     'Основная работа': {
         'Бизнес': 60,
-        'Личное': 40,
+        'Личное': 40
     },
     'Фриланс и подработки': {
         'Бизнес': 70,
-        'Личное': 30,
+        'Личное': 30
     },
     'Продажи товаров': {
         'Бизнес': 80,
-        'Личное': 20,
+        'Личное': 20
     },
     'Инвестиционный доход': {
         'Инвестиции': 90,
-        'Личное': 10,
+        'Личное': 10
     },
     'Возврат долгов': {
         'Личное': 70,
-        'Бизнес': 30,
+        'Бизнес': 30
     },
     'Подарки и премии': {
         'Личное': 80,
-        'Бизнес': 20,
+        'Бизнес': 20
     },
 
-    # РАСХОДЫ
+    # Расходы
     'Продукты питания': {
         'Личное': 90,
-        'Бизнес': 10,
+        'Бизнес': 10
     },
     'Транспорт': {
         'Личное': 60,
-        'Бизнес': 40,
+        'Бизнес': 40
     },
     'Жилье и коммунальные услуги': {
         'Личное': 70,
         'Бизнес': 20,
-        'Налоги': 10,
+        'Налоги': 10
     },
     'Развлечения и отдых': {
         'Личное': 85,
         'Бизнес': 10,
-        'Благотворительность': 5,
+        'Благотворительность': 5
     },
     'Образование и развитие': {
         'Бизнес': 50,
         'Личное': 40,
-        'Инвестиции': 10,
+        'Инвестиции': 10
     },
     'Здоровье и медицина': {
         'Личное': 90,
-        'Бизнес': 10,
+        'Бизнес': 10
     },
 }
 
-# ============================================================================
-# КОМАНДА
-# ============================================================================
+
+# ==================== Management Command ====================
 
 class Command(BaseCommand):
     """
-    Команда для заполнения базы данных тестовыми данными ДДС-менеджера.
+    Management-команда для заполнения базы данных тестовыми данными.
 
-    Создает:
-    - 5 статусов
-    - 2 типа операций
-    - 12 категорий (6 для доходов, 6 для расходов)
-    - 36 подкатегорий (по 3 для каждой категории)
-    - 75 транзакций за последний год (по умолчанию)
+    Создает реалистичную структуру данных для тестирования приложения:
+    - 5 статусов операций
+    - 2 типа операций (Пополнение/Списание)
+    - 12 категорий (6 доходных, 6 расходных)
+    - 36 подкатегорий (по 3 на каждую категорию)
+    - Настраиваемое количество транзакций за последний год
 
-    Статусы распределяются реалистично на основе категорий:
-    - Бизнес-категории чаще получают статус "Бизнес"
-    - Инвестиционный доход → статус "Инвестиции"
-    - Личные расходы → статус "Личное"
-    - И т.д.
+    Использование:
+        python manage.py populate_database
+        python manage.py populate_database --transactions 500
+        python manage.py populate_database --clear --transactions 300
     """
+
     help = 'Заполняет базу данных тестовыми данными для ДДС-менеджера'
 
     def add_arguments(self, parser):
@@ -216,18 +209,16 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
-        """Основной метод команды: выполняет заполнение базы данных."""
+        """Основной метод выполнения команды."""
 
         if options['clear']:
             self._clear_data()
 
-        # Создаем справочники
         statuses = self._create_statuses()
         types = self._create_types()
         categories = self._create_categories(types)
         subcategories = self._create_subcategories(categories)
 
-        # Создаем транзакции
         transactions_count = options['transactions']
         self._create_transactions(statuses, types, subcategories, transactions_count)
 
@@ -237,7 +228,7 @@ class Command(BaseCommand):
         self._print_statistics()
 
     def _clear_data(self):
-        """Очищает существующие данные."""
+        """Удаляет все существующие данные из базы."""
         Transaction.objects.all().delete()
         Subcategory.objects.all().delete()
         Category.objects.all().delete()
@@ -246,7 +237,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('Существующие данные очищены'))
 
     def _create_statuses(self):
-        """Создает статусы операций."""
+        """
+        Создает справочник статусов.
+
+        Returns:
+            list: Список созданных объектов Status
+        """
         statuses = []
         for name in STATUS_NAMES:
             status, created = Status.objects.get_or_create(
@@ -261,7 +257,12 @@ class Command(BaseCommand):
         return statuses
 
     def _create_types(self):
-        """Создает типы операций и возвращает их в виде словаря."""
+        """
+        Создает справочник типов операций.
+
+        Returns:
+            dict: Словарь {'income': Type, 'expense': Type}
+        """
         types_dict = {}
 
         for key, name in TYPE_NAMES.items():
@@ -277,8 +278,15 @@ class Command(BaseCommand):
         return types_dict
 
     def _create_categories(self, types):
-        """Создает категории для каждого типа."""
-        # Безопасный доступ к типам
+        """
+        Создает справочник категорий с привязкой к типам.
+
+        Args:
+            types: Словарь с типами операций
+
+        Returns:
+            list: Список созданных объектов Category
+        """
         income_type = types.get('income')
         expense_type = types.get('expense')
 
@@ -287,7 +295,6 @@ class Command(BaseCommand):
 
         categories = []
 
-        # Создаем категории доходов
         for name in INCOME_CATEGORIES:
             category, created = Category.objects.get_or_create(
                 name=name,
@@ -298,7 +305,6 @@ class Command(BaseCommand):
                 self.stdout.write(f'  Создана категория доходов: {name}')
             categories.append(category)
 
-        # Создаем категории расходов
         for name in EXPENSE_CATEGORIES:
             category, created = Category.objects.get_or_create(
                 name=name,
@@ -313,7 +319,15 @@ class Command(BaseCommand):
         return categories
 
     def _create_subcategories(self, categories):
-        """Создает подкатегории для каждой категории."""
+        """
+        Создает справочник подкатегорий с привязкой к категориям.
+
+        Args:
+            categories: Список категорий
+
+        Returns:
+            list: Список созданных объектов Subcategory
+        """
         subcategories = []
 
         for category in categories:
@@ -332,34 +346,38 @@ class Command(BaseCommand):
         return subcategories
 
     def _create_transactions(self, statuses, types, subcategories, count):
-        """Создает транзакции."""
+        """
+        Создает транзакции с реалистичным распределением по датам, суммам и статусам.
+
+        Args:
+            statuses: Список статусов
+            types: Словарь с типами операций
+            subcategories: Список подкатегорий
+            count: Количество транзакций для создания
+        """
         income_type = types.get('income')
         expense_type = types.get('expense')
 
         if not income_type or not expense_type:
             raise CommandError('Не удалось найти необходимые типы операций')
 
-        # Получаем подкатегории по типам
+        # Разделяем подкатегории по типам
         income_subcategories = [s for s in subcategories if s.category.type == income_type]
         expense_subcategories = [s for s in subcategories if s.category.type == expense_type]
 
         if not income_subcategories or not expense_subcategories:
             raise CommandError('Недостаточно подкатегорий для создания транзакций')
 
-        # Создаем словарь статусов для быстрого доступа по имени
         statuses_dict = {status.name: status for status in statuses}
-
         transactions_created = 0
-
-        # Создаем транзакции за последний год
         start_date = date.today() - timedelta(days=TRANSACTIONS_DATE_RANGE_DAYS)
 
         for i in range(count):
-            # Случайная дата в течение года
+            # Генерируем случайную дату в течение года
             random_days = random.randint(0, TRANSACTIONS_DATE_RANGE_DAYS)
             transaction_date = start_date + timedelta(days=random_days)
 
-            # Определяем тип операции на основе заданных процентов
+            # Определяем тип на основе заданного процентного соотношения
             is_income = random.choice(
                 [True] * INCOME_PERCENTAGE + [False] * EXPENSE_PERCENTAGE
             )
@@ -373,20 +391,13 @@ class Command(BaseCommand):
                 available_subcategories = expense_subcategories
                 comment_templates = EXPENSE_COMMENT_TEMPLATES
 
-            # Выбираем случайную подкатегорию
             subcategory = random.choice(available_subcategories)
             category = subcategory.category
 
-            # Определяем сумму на основе типа операции
             amount = self._generate_amount(subcategory.name)
-
-            # Генерируем комментарий
             comment = self._generate_comment(comment_templates)
-
-            # Выбираем статус на основе категории (weighted choice)
             status = self._get_status_for_category(category.name, statuses_dict)
 
-            # Создаем транзакцию
             Transaction.objects.create(
                 date=transaction_date,
                 status=status,
@@ -399,7 +410,6 @@ class Command(BaseCommand):
 
             transactions_created += 1
 
-            # Показываем прогресс
             if transactions_created % PROGRESS_REPORT_INTERVAL == 0:
                 self.stdout.write(f'  Создано транзакций: {transactions_created}')
 
@@ -407,11 +417,22 @@ class Command(BaseCommand):
             self.style.SUCCESS(f'Транзакции: {transactions_created} шт.')
         )
 
-    def _generate_amount(self, subcategory_name):
-        """Генерирует сумму транзакции на основе типа подкатегории."""
+    @staticmethod
+    def _generate_amount(subcategory_name):
+        """
+        Генерирует сумму транзакции на основе типа подкатегории.
+
+        Использует предопределенные диапазоны для разных типов операций,
+        чтобы суммы выглядели реалистично.
+
+        Args:
+            subcategory_name: Название подкатегории
+
+        Returns:
+            Decimal: Сумма транзакции
+        """
         subcategory_lower = subcategory_name.lower()
 
-        # Определяем диапазон суммы на основе ключевых слов
         if 'зарплата' in subcategory_lower:
             amount_range = AMOUNT_RANGES['Зарплата']
         elif 'премия' in subcategory_lower:
@@ -433,30 +454,48 @@ class Command(BaseCommand):
 
         return Decimal(str(random.randint(amount_range[0], amount_range[1])))
 
-    def _generate_comment(self, comment_templates):
-        """Генерирует комментарий к транзакции."""
-        # Иногда оставляем комментарий пустым
+    @staticmethod
+    def _generate_comment(comment_templates):
+        """
+        Генерирует комментарий к транзакции.
+
+        С заданной вероятностью возвращает пустой комментарий,
+        иначе выбирает случайный шаблон и подставляет в него данные.
+
+        Args:
+            comment_templates: Список шаблонов комментариев
+
+        Returns:
+            str: Текст комментария или пустая строка
+        """
         if random.random() < EMPTY_COMMENT_PROBABILITY:
             return ''
 
         comment_template = random.choice(comment_templates)
-        return comment_template.format(
-            place=random.choice(PLACES)
-        )
+        return comment_template.format(place=random.choice(PLACES))
 
-    def _get_status_for_category(self, category_name, statuses_dict):
+    @staticmethod
+    def _get_status_for_category(category_name, statuses_dict):
         """
-        Выбирает статус для категории на основе весов из маппинга.
-        Использует weighted random choice для реалистичного распределения.
+        Выбирает статус для категории с учетом весов из маппинга.
+
+        Использует weighted random choice для реалистичного распределения:
+        - Бизнес-категории чаще получают статус "Бизнес"
+        - Инвестиционный доход → статус "Инвестиции"
+        - Личные расходы → статус "Личное"
+
+        Args:
+            category_name: Название категории
+            statuses_dict: Словарь {имя_статуса: объект_Status}
+
+        Returns:
+            Status: Выбранный статус
         """
-        # Получаем маппинг весов для данной категории
         status_weights = CATEGORY_STATUS_MAPPING.get(category_name, {})
 
-        # Если маппинг не найден, используем равномерное распределение
         if not status_weights:
             return random.choice(list(statuses_dict.values()))
 
-        # Формируем списки статусов и их весов
         available_statuses = []
         weights = []
 
@@ -465,15 +504,14 @@ class Command(BaseCommand):
                 available_statuses.append(statuses_dict[status_name])
                 weights.append(weight)
 
-        # Выбираем статус с учетом весов
         if available_statuses:
             return random.choices(available_statuses, weights=weights, k=1)[0]
         else:
-            # Фолбэк на случайный статус, если что-то пошло не так
             return random.choice(list(statuses_dict.values()))
 
     def _print_statistics(self):
-        """Выводит статистику созданных данных."""
+        """Выводит детальную статистику созданных данных."""
+
         self.stdout.write('\n' + '=' * 50)
         self.stdout.write(self.style.SUCCESS('СТАТИСТИКА СОЗДАННЫХ ДАННЫХ:'))
         self.stdout.write('=' * 50)
@@ -493,7 +531,6 @@ class Command(BaseCommand):
         self.stdout.write(f'  Пополнения: {income_count}')
         self.stdout.write(f'  Списания: {expense_count}')
 
-        # Суммы
         total_income = Transaction.objects.filter(type__name=TYPE_NAMES['income']).aggregate(
             total=Sum('amount')
         )['total'] or 0
@@ -516,5 +553,5 @@ class Command(BaseCommand):
             self.stdout.write(f'  {i}. {category.name}: {category.transaction_count} транзакций')
 
         self.stdout.write('\n' + '=' * 50)
-        self.stdout.write(self.style.SUCCESS('Готово! Можете тестировать приложение.'))
+        self.stdout.write(self.style.SUCCESS('Готово! Можно тестировать приложение.'))
         self.stdout.write('=' * 50)

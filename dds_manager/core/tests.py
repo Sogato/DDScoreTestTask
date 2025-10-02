@@ -11,16 +11,14 @@ from .forms import TransactionForm, TransactionFilterForm
 
 
 class ModelsTestCase(TestCase):
-    """Тесты для моделей"""
+    """Тесты моделей данных и их валидации."""
 
     def setUp(self):
-        """Создание тестовых данных для каждого теста"""
-        # Создаем базовые справочники
+        """Создание базовых тестовых объектов перед каждым тестом."""
         self.status = Status.objects.create(name='Бизнес', slug='business')
         self.income_type = Type.objects.create(name='Пополнение', slug='income')
         self.expense_type = Type.objects.create(name='Списание', slug='expense')
 
-        # Категории
         self.income_category = Category.objects.create(
             name='Продажи', slug='sales', type=self.income_type
         )
@@ -28,7 +26,6 @@ class ModelsTestCase(TestCase):
             name='Маркетинг', slug='marketing', type=self.expense_type
         )
 
-        # Подкатегории
         self.income_subcategory = Subcategory.objects.create(
             name='Онлайн продажи', slug='online-sales', category=self.income_category
         )
@@ -37,28 +34,28 @@ class ModelsTestCase(TestCase):
         )
 
     def test_status_creation(self):
-        """Тест создания статуса"""
+        """Тест создания статуса и его строкового представления."""
         status = Status.objects.create(name='Личное', slug='personal')
         self.assertEqual(status.name, 'Личное')
         self.assertEqual(str(status), 'Личное')
 
     def test_type_creation(self):
-        """Тест создания типа"""
+        """Тест создания типа операции."""
         self.assertEqual(str(self.income_type), 'Пополнение')
         self.assertEqual(self.income_type.slug, 'income')
 
     def test_category_type_relationship(self):
-        """Тест связи категории с типом"""
+        """Тест связи категории с типом операции."""
         self.assertEqual(self.income_category.type, self.income_type)
         self.assertIn(self.income_category, self.income_type.categories.all())
 
     def test_subcategory_category_relationship(self):
-        """Тест связи подкатегории с категорией"""
+        """Тест связи подкатегории с категорией."""
         self.assertEqual(self.income_subcategory.category, self.income_category)
         self.assertIn(self.income_subcategory, self.income_category.subcategories.all())
 
     def test_transaction_creation_valid(self):
-        """Тест создания валидной транзакции"""
+        """Тест создания валидной транзакции."""
         transaction = Transaction.objects.create(
             date=date.today(),
             status=self.status,
@@ -74,13 +71,13 @@ class ModelsTestCase(TestCase):
         self.assertTrue('1000' in str(transaction))
 
     def test_transaction_validation_subcategory_mismatch(self):
-        """Тест валидации: подкатегория не соответствует категории"""
+        """Тест валидации: подкатегория должна принадлежать выбранной категории."""
         transaction = Transaction(
             date=date.today(),
             status=self.status,
             type=self.income_type,
             category=self.income_category,
-            subcategory=self.expense_subcategory,  # Неправильная подкатегория!
+            subcategory=self.expense_subcategory,
             amount=Decimal('1000.00')
         )
 
@@ -90,12 +87,12 @@ class ModelsTestCase(TestCase):
         self.assertIn('subcategory', cm.exception.message_dict)
 
     def test_transaction_validation_category_mismatch(self):
-        """Тест валидации: категория не соответствует типу"""
+        """Тест валидации: категория должна принадлежать выбранному типу."""
         transaction = Transaction(
             date=date.today(),
             status=self.status,
             type=self.income_type,
-            category=self.expense_category,  # Неправильная категория!
+            category=self.expense_category,
             subcategory=self.income_subcategory,
             amount=Decimal('1000.00')
         )
@@ -106,19 +103,18 @@ class ModelsTestCase(TestCase):
         self.assertIn('category', cm.exception.message_dict)
 
     def test_unique_constraints_same_type(self):
-        """Тест что нельзя создать две одинаковые категории для одного типа"""
+        """Тест уникального ограничения: категория с тем же именем для того же типа."""
         with self.assertRaises(IntegrityError):
             Category.objects.create(
-                name='Продажи',  # Уже существует для income_type
+                name='Продажи',
                 slug='sales-duplicate',
                 type=self.income_type
             )
 
     def test_unique_constraints_different_types(self):
-        """Тест что можно создать категории с одинаковым именем для разных типов"""
-        # Можно создать категорию с тем же именем для другого типа
+        """Тест: категории с одинаковым именем разрешены для разных типов."""
         category_same_name = Category.objects.create(
-            name='Продажи',  # То же имя, но другой тип
+            name='Продажи',
             slug='sales-expense',
             type=self.expense_type
         )
@@ -128,10 +124,10 @@ class ModelsTestCase(TestCase):
 
 
 class FormsTestCase(TestCase):
-    """Тесты для форм"""
+    """Тесты форм приложения."""
 
     def setUp(self):
-        """Создание тестовых данных"""
+        """Создание тестовых данных."""
         self.status = Status.objects.create(name='Бизнес', slug='business')
         self.income_type = Type.objects.create(name='Пополнение', slug='income')
         self.expense_type = Type.objects.create(name='Списание', slug='expense')
@@ -151,7 +147,7 @@ class FormsTestCase(TestCase):
         )
 
     def test_transaction_form_valid_data(self):
-        """Тест валидной формы транзакции"""
+        """Тест валидной формы транзакции."""
         form_data = {
             'date': date.today(),
             'status': self.status.id,
@@ -166,27 +162,25 @@ class FormsTestCase(TestCase):
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
 
     def test_transaction_form_invalid_relationships(self):
-        """Тест невалидной формы с неправильными связями"""
+        """Тест невалидной формы с нарушением иерархических зависимостей."""
         form_data = {
             'date': date.today(),
             'status': self.status.id,
             'type': self.income_type.id,
             'category': self.income_category.id,
-            'subcategory': self.expense_subcategory.id,  # Неправильная подкатегория
+            'subcategory': self.expense_subcategory.id,
             'amount': '1000.00'
         }
 
         form = TransactionForm(data=form_data)
         self.assertFalse(form.is_valid())
-        # Проверяем, что есть ошибка в поле subcategory
         self.assertIn('subcategory', form.errors)
 
     def test_transaction_form_missing_required_fields(self):
-        """Тест формы с отсутствующими обязательными полями"""
+        """Тест формы с отсутствующими обязательными полями."""
         form_data = {
             'date': date.today(),
             'comment': 'Тест'
-            # Отсутствуют обязательные поля
         }
 
         form = TransactionForm(data=form_data)
@@ -198,7 +192,7 @@ class FormsTestCase(TestCase):
         self.assertIn('amount', form.errors)
 
     def test_transaction_filter_form(self):
-        """Тест формы фильтрации"""
+        """Тест формы фильтрации транзакций."""
         form_data = {
             'date_from': date.today() - timedelta(days=30),
             'date_to': date.today(),
@@ -210,8 +204,7 @@ class FormsTestCase(TestCase):
         self.assertTrue(form.is_valid())
 
     def test_transaction_form_with_editing_instance(self):
-        """Тест формы при редактировании существующей транзакции"""
-        # Создаем транзакцию
+        """Тест формы при редактировании существующей транзакции."""
         transaction = Transaction.objects.create(
             date=date.today(),
             status=self.status,
@@ -221,7 +214,6 @@ class FormsTestCase(TestCase):
             amount=Decimal('500.00')
         )
 
-        # Проверяем, что форма корректно инициализируется
         form = TransactionForm(instance=transaction)
         self.assertEqual(
             form.fields['category'].queryset.count(),
@@ -230,13 +222,12 @@ class FormsTestCase(TestCase):
 
 
 class ViewsTestCase(TestCase):
-    """Тесты для представлений"""
+    """Тесты представлений приложения."""
 
     def setUp(self):
-        """Создание тестовых данных и клиента"""
+        """Создание тестовых данных и HTTP-клиента."""
         self.client = Client()
 
-        # Создаем справочники
         self.status = Status.objects.create(name='Бизнес', slug='business')
         self.income_type = Type.objects.create(name='Пополнение', slug='income')
         self.expense_type = Type.objects.create(name='Списание', slug='expense')
@@ -255,7 +246,6 @@ class ViewsTestCase(TestCase):
             name='Avito', slug='avito', category=self.expense_category
         )
 
-        # Создаем тестовые транзакции
         self.transaction1 = Transaction.objects.create(
             date=date.today(),
             status=self.status,
@@ -277,40 +267,36 @@ class ViewsTestCase(TestCase):
         )
 
     def test_transaction_list_view(self):
-        """Тест главной страницы со списком транзакций"""
+        """Тест отображения списка транзакций."""
         response = self.client.get(reverse('transaction_list'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Список транзакций')
-        # Гибкая проверка на наличие чисел
         self.assertContains(response, '1')
         self.assertContains(response, '000')
         self.assertContains(response, '500')
 
     def test_transaction_list_filtering(self):
-        """Тест фильтрации транзакций"""
-        # Фильтрация по типу
+        """Тест фильтрации транзакций по типу."""
         response = self.client.get(reverse('transaction_list'), {
             'type': self.income_type.id
         })
 
         self.assertEqual(response.status_code, 200)
-        # Проверяем наличие суммы транзакции дохода
         self.assertContains(response, '1')
         self.assertContains(response, '000')
-        # Проверим через количество транзакций в контексте
         self.assertEqual(len(response.context['transactions']), 1)
         self.assertEqual(response.context['transactions'][0].amount, Decimal('1000.00'))
 
     def test_transaction_create_view_get(self):
-        """Тест GET запроса на создание транзакции"""
+        """Тест GET-запроса страницы создания транзакции."""
         response = self.client.get(reverse('transaction_create'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Создание транзакции')
 
     def test_transaction_create_view_post_valid(self):
-        """Тест валидного POST запроса на создание транзакции"""
+        """Тест создания транзакции через POST-запрос."""
         data = {
             'date': date.today(),
             'status': self.status.id,
@@ -323,32 +309,31 @@ class ViewsTestCase(TestCase):
 
         response = self.client.post(reverse('transaction_create'), data)
 
-        self.assertEqual(response.status_code, 302)  # Редирект после создания
+        self.assertEqual(response.status_code, 302)
         self.assertTrue(
             Transaction.objects.filter(amount=Decimal('2000.00')).exists()
         )
 
     def test_transaction_create_view_post_invalid(self):
-        """Тест невалидного POST запроса на создание транзакции"""
+        """Тест создания транзакции с невалидными данными."""
         data = {
             'date': date.today(),
             'status': self.status.id,
             'type': self.income_type.id,
             'category': self.income_category.id,
-            'subcategory': self.expense_subcategory.id,  # Неправильная подкатегория
+            'subcategory': self.expense_subcategory.id,
             'amount': '2000.00'
         }
 
         response = self.client.post(reverse('transaction_create'), data)
 
-        self.assertEqual(response.status_code, 200)  # Остается на форме
-        # Проверяем, что новая транзакция НЕ создалась
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(
             Transaction.objects.filter(amount=Decimal('2000.00')).exists()
         )
 
     def test_transaction_update_view(self):
-        """Тест редактирования транзакции"""
+        """Тест GET-запроса страницы редактирования транзакции."""
         response = self.client.get(
             reverse('transaction_update', args=[self.transaction1.pk])
         )
@@ -358,14 +343,14 @@ class ViewsTestCase(TestCase):
         self.assertContains(response, '1000')
 
     def test_transaction_update_post(self):
-        """Тест POST запроса на редактирование транзакции"""
+        """Тест обновления транзакции через POST-запрос."""
         data = {
             'date': date.today(),
             'status': self.status.id,
             'type': self.income_type.id,
             'category': self.income_category.id,
             'subcategory': self.income_subcategory.id,
-            'amount': '1500.00',  # Изменяем сумму
+            'amount': '1500.00',
             'comment': 'Обновленная транзакция'
         }
 
@@ -379,8 +364,7 @@ class ViewsTestCase(TestCase):
         self.assertEqual(self.transaction1.amount, Decimal('1500.00'))
 
     def test_transaction_update_change_category(self):
-        """Тест изменения категории и подкатегории при редактировании"""
-        # Создаем альтернативную категорию и подкатегорию
+        """Тест изменения категории и подкатегории при редактировании."""
         alt_category = Category.objects.create(
             name='Другая категория', slug='other', type=self.income_type
         )
@@ -388,13 +372,12 @@ class ViewsTestCase(TestCase):
             name='Другая подкатегория', slug='other-sub', category=alt_category
         )
 
-        # Меняем категорию и подкатегорию на другие
         data = {
             'date': date.today(),
             'status': self.status.id,
             'type': self.income_type.id,
-            'category': alt_category.id,  # НОВАЯ категория
-            'subcategory': alt_subcategory.id,  # НОВАЯ подкатегория
+            'category': alt_category.id,
+            'subcategory': alt_subcategory.id,
             'amount': '1000.00',
             'comment': 'Изменены категории'
         }
@@ -410,7 +393,7 @@ class ViewsTestCase(TestCase):
         self.assertEqual(self.transaction1.subcategory, alt_subcategory)
 
     def test_transaction_delete_view(self):
-        """Тест страницы удаления транзакции"""
+        """Тест GET-запроса страницы подтверждения удаления."""
         response = self.client.get(
             reverse('transaction_delete', args=[self.transaction1.pk])
         )
@@ -419,7 +402,7 @@ class ViewsTestCase(TestCase):
         self.assertContains(response, 'Подтверждение удаления')
 
     def test_transaction_delete_post(self):
-        """Тест POST запроса на удаление транзакции"""
+        """Тест удаления транзакции через POST-запрос."""
         transaction_id = self.transaction1.pk
 
         response = self.client.post(
@@ -430,7 +413,7 @@ class ViewsTestCase(TestCase):
         self.assertFalse(Transaction.objects.filter(pk=transaction_id).exists())
 
     def test_references_list_view(self):
-        """Тест страницы управления справочниками"""
+        """Тест страницы управления справочниками."""
         response = self.client.get(reverse('references_list'))
 
         self.assertEqual(response.status_code, 200)
@@ -440,10 +423,10 @@ class ViewsTestCase(TestCase):
 
 
 class AjaxViewsTestCase(TestCase):
-    """Тесты для AJAX endpoints"""
+    """Тесты AJAX endpoints для динамической загрузки данных."""
 
     def setUp(self):
-        """Создание тестовых данных"""
+        """Создание тестовых данных."""
         self.client = Client()
 
         self.income_type = Type.objects.create(name='Пополнение', slug='income')
@@ -464,7 +447,7 @@ class AjaxViewsTestCase(TestCase):
         )
 
     def test_load_categories_ajax(self):
-        """Тест AJAX загрузки категорий по типу"""
+        """Тест AJAX загрузки категорий по типу."""
         response = self.client.get(reverse('ajax_load_categories'), {
             'type_id': self.income_type.id
         })
@@ -477,9 +460,9 @@ class AjaxViewsTestCase(TestCase):
         self.assertEqual(data[0]['id'], self.income_category.id)
 
     def test_load_categories_ajax_invalid_type(self):
-        """Тест AJAX загрузки категорий с несуществующим типом"""
+        """Тест AJAX загрузки категорий с несуществующим типом."""
         response = self.client.get(reverse('ajax_load_categories'), {
-            'type_id': 999  # Несуществующий ID
+            'type_id': 999
         })
 
         self.assertEqual(response.status_code, 200)
@@ -487,7 +470,7 @@ class AjaxViewsTestCase(TestCase):
         self.assertEqual(len(data), 0)
 
     def test_load_subcategories_ajax(self):
-        """Тест AJAX загрузки подкатегорий по категории"""
+        """Тест AJAX загрузки подкатегорий по категории."""
         response = self.client.get(reverse('ajax_load_subcategories'), {
             'category_id': self.income_category.id
         })
@@ -500,9 +483,9 @@ class AjaxViewsTestCase(TestCase):
         self.assertEqual(data[0]['id'], self.income_subcategory.id)
 
     def test_load_subcategories_ajax_invalid_category(self):
-        """Тест AJAX загрузки подкатегорий с несуществующей категорией"""
+        """Тест AJAX загрузки подкатегорий с несуществующей категорией."""
         response = self.client.get(reverse('ajax_load_subcategories'), {
-            'category_id': 999  # Несуществующий ID
+            'category_id': 999
         })
 
         self.assertEqual(response.status_code, 200)
@@ -511,17 +494,17 @@ class AjaxViewsTestCase(TestCase):
 
 
 class ReferenceCRUDTestCase(TestCase):
-    """Тесты для CRUD операций со справочниками"""
+    """Тесты базовых CRUD операций со справочниками."""
 
     def setUp(self):
-        """Создание тестовых данных"""
+        """Создание тестовых данных."""
         self.client = Client()
 
         self.status = Status.objects.create(name='Бизнес', slug='business')
         self.type = Type.objects.create(name='Пополнение', slug='income')
 
     def test_status_create(self):
-        """Тест создания статуса"""
+        """Тест создания статуса."""
         data = {
             'name': 'Личное',
             'slug': 'personal'
@@ -533,7 +516,7 @@ class ReferenceCRUDTestCase(TestCase):
         self.assertTrue(Status.objects.filter(name='Личное').exists())
 
     def test_status_update(self):
-        """Тест редактирования статуса"""
+        """Тест редактирования статуса."""
         data = {
             'name': 'Бизнес обновленный',
             'slug': 'business-updated'
@@ -549,7 +532,7 @@ class ReferenceCRUDTestCase(TestCase):
         self.assertEqual(self.status.name, 'Бизнес обновленный')
 
     def test_status_delete(self):
-        """Тест удаления статуса"""
+        """Тест удаления статуса."""
         status_slug = self.status.slug
 
         response = self.client.post(
@@ -560,7 +543,7 @@ class ReferenceCRUDTestCase(TestCase):
         self.assertFalse(Status.objects.filter(slug=status_slug).exists())
 
     def test_category_create_with_type(self):
-        """Тест создания категории с привязкой к типу"""
+        """Тест создания категории с привязкой к типу."""
         data = {
             'name': 'Новая категория',
             'slug': 'new-category',
@@ -575,13 +558,12 @@ class ReferenceCRUDTestCase(TestCase):
 
 
 class IntegrationTestCase(TestCase):
-    """Интеграционные тесты"""
+    """Интеграционные тесты полного цикла работы с данными."""
 
     def setUp(self):
-        """Создание полного набора тестовых данных"""
+        """Создание полного набора тестовых данных."""
         self.client = Client()
 
-        # Создаем полный набор справочников
         self.status = Status.objects.create(name='Бизнес', slug='business')
         self.income_type = Type.objects.create(name='Пополнение', slug='income')
         self.expense_type = Type.objects.create(name='Списание', slug='expense')
@@ -601,8 +583,8 @@ class IntegrationTestCase(TestCase):
         )
 
     def test_full_transaction_workflow(self):
-        """Тест полного цикла работы с транзакцией"""
-        # 1. Создание транзакции
+        """Тест полного цикла: создание → редактирование → отображение → удаление."""
+        # Создание
         create_data = {
             'date': date.today(),
             'status': self.status.id,
@@ -616,11 +598,10 @@ class IntegrationTestCase(TestCase):
         response = self.client.post(reverse('transaction_create'), create_data)
         self.assertEqual(response.status_code, 302)
 
-        # 2. Проверка, что транзакция создалась
         transaction = Transaction.objects.get(comment='Интеграционный тест')
         self.assertEqual(transaction.amount, Decimal('1000.00'))
 
-        # 3. Редактирование транзакции
+        # Редактирование
         update_data = create_data.copy()
         update_data['amount'] = '1500.00'
         update_data['comment'] = 'Обновленный тест'
@@ -631,29 +612,27 @@ class IntegrationTestCase(TestCase):
         )
         self.assertEqual(response.status_code, 302)
 
-        # 4. Проверка обновления
         transaction.refresh_from_db()
         self.assertEqual(transaction.amount, Decimal('1500.00'))
 
-        # 5. Проверка в списке (гибкая проверка числа)
+        # Проверка в списке
         response = self.client.get(reverse('transaction_list'))
         self.assertContains(response, '1')
         self.assertContains(response, '500')
 
-        # 6. Удаление транзакции
+        # Удаление
         response = self.client.post(
             reverse('transaction_delete', args=[transaction.pk])
         )
         self.assertEqual(response.status_code, 302)
 
-        # 7. Проверка удаления
         self.assertFalse(
             Transaction.objects.filter(pk=transaction.pk).exists()
         )
 
     def test_cascading_dependency_workflow(self):
-        """Тест работы каскадных зависимостей через AJAX"""
-        # 1. Загружаем категории для типа доходов
+        """Тест каскадной загрузки зависимостей через AJAX."""
+        # Загрузка категорий для типа
         response = self.client.get(reverse('ajax_load_categories'), {
             'type_id': self.income_type.id
         })
@@ -662,7 +641,7 @@ class IntegrationTestCase(TestCase):
         self.assertEqual(len(categories), 1)
         self.assertEqual(categories[0]['id'], self.income_category.id)
 
-        # 2. Загружаем подкатегории для полученной категории
+        # Загрузка подкатегорий для категории
         response = self.client.get(reverse('ajax_load_subcategories'), {
             'category_id': self.income_category.id
         })
@@ -671,7 +650,7 @@ class IntegrationTestCase(TestCase):
         self.assertEqual(len(subcategories), 1)
         self.assertEqual(subcategories[0]['id'], self.income_subcategory.id)
 
-        # 3. Создаем транзакцию с этими зависимостями
+        # Создание транзакции с этими зависимостями
         data = {
             'date': date.today(),
             'status': self.status.id,
@@ -684,7 +663,6 @@ class IntegrationTestCase(TestCase):
         response = self.client.post(reverse('transaction_create'), data)
         self.assertEqual(response.status_code, 302)
 
-        # 4. Проверяем, что транзакция создалась корректно
         transaction = Transaction.objects.latest('id')
         self.assertEqual(transaction.type, self.income_type)
         self.assertEqual(transaction.category, self.income_category)
@@ -692,14 +670,14 @@ class IntegrationTestCase(TestCase):
 
 
 class StatusCRUDTestCase(TestCase):
-    """Полные тесты для CRUD операций со статусами"""
+    """Детальные тесты CRUD операций со статусами."""
 
     def setUp(self):
         self.client = Client()
         self.status = Status.objects.create(name='Тестовый статус', slug='test-status')
 
     def test_status_create_get(self):
-        """Тест GET запроса создания статуса"""
+        """Тест GET-запроса формы создания статуса."""
         response = self.client.get(reverse('status_create'))
 
         self.assertEqual(response.status_code, 200)
@@ -707,7 +685,7 @@ class StatusCRUDTestCase(TestCase):
         self.assertContains(response, 'Создать')
 
     def test_status_create_post_valid(self):
-        """Тест валидного POST запроса создания статуса"""
+        """Тест создания статуса через POST-запрос."""
         data = {
             'name': 'Новый статус',
             'slug': 'new-status'
@@ -718,21 +696,19 @@ class StatusCRUDTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Status.objects.filter(name='Новый статус').exists())
 
-        # Проверяем сообщение об успехе
         messages_list = list(response.wsgi_request._messages)
         self.assertTrue(any('успешно создан' in str(m) for m in messages_list))
 
     def test_status_update_get(self):
-        """Тест GET запроса редактирования статуса"""
+        """Тест GET-запроса формы редактирования статуса."""
         response = self.client.get(reverse('status_update', kwargs={'slug': self.status.slug}))
 
         self.assertEqual(response.status_code, 200)
-        # В HTML кавычки экранируются как &quot;
         self.assertContains(response, f'Редактирование статуса &quot;{self.status.name}&quot;')
         self.assertContains(response, 'Сохранить')
 
     def test_status_update_post_valid(self):
-        """Тест валидного POST запроса редактирования статуса"""
+        """Тест обновления статуса через POST-запрос."""
         data = {
             'name': 'Обновленный статус',
             'slug': 'updated-status'
@@ -745,14 +721,14 @@ class StatusCRUDTestCase(TestCase):
         self.assertEqual(self.status.name, 'Обновленный статус')
 
     def test_status_delete_get(self):
-        """Тест GET запроса удаления статуса"""
+        """Тест GET-запроса формы подтверждения удаления статуса."""
         response = self.client.get(reverse('status_delete', kwargs={'slug': self.status.slug}))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'статус')
 
     def test_status_delete_post(self):
-        """Тест POST запроса удаления статуса"""
+        """Тест удаления статуса через POST-запрос."""
         status_slug = self.status.slug
 
         response = self.client.post(reverse('status_delete', kwargs={'slug': status_slug}))
@@ -762,21 +738,21 @@ class StatusCRUDTestCase(TestCase):
 
 
 class TypeCRUDTestCase(TestCase):
-    """Полные тесты для CRUD операций с типами"""
+    """Детальные тесты CRUD операций с типами операций."""
 
     def setUp(self):
         self.client = Client()
         self.type = Type.objects.create(name='Тестовый тип', slug='test-type')
 
     def test_type_create_get(self):
-        """Тест GET запроса создания типа"""
+        """Тест GET-запроса формы создания типа."""
         response = self.client.get(reverse('type_create'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Создание типа')
 
     def test_type_create_post_valid(self):
-        """Тест валидного POST запроса создания типа"""
+        """Тест создания типа через POST-запрос."""
         data = {
             'name': 'Новый тип',
             'slug': 'new-type'
@@ -788,15 +764,14 @@ class TypeCRUDTestCase(TestCase):
         self.assertTrue(Type.objects.filter(name='Новый тип').exists())
 
     def test_type_update_get(self):
-        """Тест GET запроса редактирования типа"""
+        """Тест GET-запроса формы редактирования типа."""
         response = self.client.get(reverse('type_update', kwargs={'slug': self.type.slug}))
 
         self.assertEqual(response.status_code, 200)
-        # В HTML кавычки экранируются как &quot;
         self.assertContains(response, f'Редактирование типа &quot;{self.type.name}&quot;')
 
     def test_type_update_post_valid(self):
-        """Тест валидного POST запроса редактирования типа"""
+        """Тест обновления типа через POST-запрос."""
         data = {
             'name': 'Обновленный тип',
             'slug': 'updated-type'
@@ -809,7 +784,7 @@ class TypeCRUDTestCase(TestCase):
         self.assertEqual(self.type.name, 'Обновленный тип')
 
     def test_type_delete_post(self):
-        """Тест POST запроса удаления типа"""
+        """Тест удаления типа через POST-запрос."""
         type_slug = self.type.slug
 
         response = self.client.post(reverse('type_delete', kwargs={'slug': type_slug}))
@@ -819,7 +794,7 @@ class TypeCRUDTestCase(TestCase):
 
 
 class CategoryCRUDTestCase(TestCase):
-    """Полные тесты для CRUD операций с категориями"""
+    """Детальные тесты CRUD операций с категориями."""
 
     def setUp(self):
         self.client = Client()
@@ -831,14 +806,14 @@ class CategoryCRUDTestCase(TestCase):
         )
 
     def test_category_create_get(self):
-        """Тест GET запроса создания категории"""
+        """Тест GET-запроса формы создания категории."""
         response = self.client.get(reverse('category_create'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Создание категории')
 
     def test_category_create_post_valid(self):
-        """Тест валидного POST запроса создания категории"""
+        """Тест создания категории через POST-запрос."""
         data = {
             'name': 'Новая категория',
             'slug': 'new-category',
@@ -851,15 +826,14 @@ class CategoryCRUDTestCase(TestCase):
         self.assertTrue(Category.objects.filter(name='Новая категория').exists())
 
     def test_category_update_get(self):
-        """Тест GET запроса редактирования категории"""
+        """Тест GET-запроса формы редактирования категории."""
         response = self.client.get(reverse('category_update', kwargs={'slug': self.category.slug}))
 
         self.assertEqual(response.status_code, 200)
-        # В HTML кавычки экранируются как &quot;
         self.assertContains(response, f'Редактирование категории &quot;{self.category.name}&quot;')
 
     def test_category_delete_post(self):
-        """Тест POST запроса удаления категории"""
+        """Тест удаления категории через POST-запрос."""
         category_slug = self.category.slug
 
         response = self.client.post(reverse('category_delete', kwargs={'slug': category_slug}))
@@ -869,7 +843,7 @@ class CategoryCRUDTestCase(TestCase):
 
 
 class SubcategoryCRUDTestCase(TestCase):
-    """Полные тесты для CRUD операций с подкатегориями"""
+    """Детальные тесты CRUD операций с подкатегориями."""
 
     def setUp(self):
         self.client = Client()
@@ -886,14 +860,14 @@ class SubcategoryCRUDTestCase(TestCase):
         )
 
     def test_subcategory_create_get(self):
-        """Тест GET запроса создания подкатегории"""
+        """Тест GET-запроса формы создания подкатегории."""
         response = self.client.get(reverse('subcategory_create'))
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Создание подкатегории')
 
     def test_subcategory_create_post_valid(self):
-        """Тест валидного POST запроса создания подкатегории"""
+        """Тест создания подкатегории через POST-запрос."""
         data = {
             'name': 'Новая подкатегория',
             'slug': 'new-subcategory',
@@ -906,15 +880,14 @@ class SubcategoryCRUDTestCase(TestCase):
         self.assertTrue(Subcategory.objects.filter(name='Новая подкатегория').exists())
 
     def test_subcategory_update_get(self):
-        """Тест GET запроса редактирования подкатегории"""
+        """Тест GET-запроса формы редактирования подкатегории."""
         response = self.client.get(reverse('subcategory_update', kwargs={'slug': self.subcategory.slug}))
 
         self.assertEqual(response.status_code, 200)
-        # В HTML кавычки экранируются как &quot;
         self.assertContains(response, f'Редактирование подкатегории &quot;{self.subcategory.name}&quot;')
 
     def test_subcategory_delete_post(self):
-        """Тест POST запроса удаления подкатегории"""
+        """Тест удаления подкатегории через POST-запрос."""
         subcategory_slug = self.subcategory.slug
 
         response = self.client.post(reverse('subcategory_delete', kwargs={'slug': subcategory_slug}))
@@ -924,28 +897,28 @@ class SubcategoryCRUDTestCase(TestCase):
 
 
 class ErrorHandlingTestCase(TestCase):
-    """Тесты обработки ошибок"""
+    """Тесты обработки ошибок и граничных случаев."""
 
     def setUp(self):
         self.client = Client()
 
     def test_transaction_update_404(self):
-        """Тест 404 при редактировании несуществующей транзакции"""
+        """Тест 404 при попытке редактирования несуществующей транзакции."""
         response = self.client.get(reverse('transaction_update', args=[999]))
         self.assertEqual(response.status_code, 404)
 
     def test_transaction_delete_404(self):
-        """Тест 404 при удалении несуществующей транзакции"""
+        """Тест 404 при попытке удаления несуществующей транзакции."""
         response = self.client.get(reverse('transaction_delete', args=[999]))
         self.assertEqual(response.status_code, 404)
 
     def test_status_update_404(self):
-        """Тест 404 при редактировании несуществующего статуса"""
+        """Тест 404 при попытке редактирования несуществующего статуса."""
         response = self.client.get(reverse('status_update', kwargs={'slug': 'nonexistent'}))
         self.assertEqual(response.status_code, 404)
 
     def test_ajax_load_categories_empty_type(self):
-        """Тест AJAX загрузки категорий без параметра type_id"""
+        """Тест AJAX загрузки категорий без параметра type_id."""
         response = self.client.get(reverse('ajax_load_categories'))
 
         self.assertEqual(response.status_code, 200)
@@ -953,7 +926,7 @@ class ErrorHandlingTestCase(TestCase):
         self.assertEqual(len(data), 0)
 
     def test_ajax_load_subcategories_empty_category(self):
-        """Тест AJAX загрузки подкатегорий без параметра category_id"""
+        """Тест AJAX загрузки подкатегорий без параметра category_id."""
         response = self.client.get(reverse('ajax_load_subcategories'))
 
         self.assertEqual(response.status_code, 200)

@@ -4,7 +4,17 @@ from .models import Transaction, Status, Type, Category, Subcategory
 
 
 class TransactionFilterForm(forms.Form):
-    """Форма для фильтрации транзакций"""
+    """
+    Форма фильтрации транзакций на главной странице.
+
+    Позволяет фильтровать по:
+    - Периоду дат (дата с/по)
+    - Статусу
+    - Типу операции (с динамической загрузкой категорий)
+    - Категории (с динамической загрузкой подкатегорий)
+    - Подкатегории
+    """
+
     date_from = forms.DateField(
         required=False,
         widget=forms.DateInput(attrs={
@@ -64,7 +74,7 @@ class TransactionFilterForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Если форма заполняется с GET параметрами
+        # Обработка GET-параметров для сохранения состояния фильтров
         if self.data:
             try:
                 type_id = self.data.get('type')
@@ -89,13 +99,19 @@ class TransactionFilterForm(forms.Form):
                 self.fields['category'].queryset = Category.objects.none()
                 self.fields['subcategory'].queryset = Subcategory.objects.none()
         else:
-            # Для пустой формы (первая загрузка)
+            # При первой загрузке страницы зависимые поля пусты
             self.fields['category'].queryset = Category.objects.none()
             self.fields['subcategory'].queryset = Subcategory.objects.none()
 
 
 class TransactionForm(forms.ModelForm):
-    """Форма для создания и редактирования транзакций"""
+    """
+    Форма создания и редактирования транзакций.
+
+    Реализует динамическую фильтрацию зависимых полей:
+    - При выборе типа через AJAX загружаются соответствующие категории
+    - При выборе категории через AJAX загружаются соответствующие подкатегории
+    """
 
     class Meta:
         model = Transaction
@@ -132,18 +148,18 @@ class TransactionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Фиксим формат даты для HTML5 input type="date"
+        # Настройка формата даты для HTML5 input type="date"
         self.fields['date'].widget.format = '%Y-%m-%d'
         self.fields['date'].input_formats = ['%Y-%m-%d']
 
-        # Изменяем empty_label для зависимых полей
+        # Подсказки для зависимых полей
         self.fields['category'].empty_label = "Сначала выберите тип"
         self.fields['subcategory'].empty_label = "Сначала выберите категорию"
 
-        # Если это редактирование существующей транзакции
+        # Редактирование существующей транзакции
         if self.instance.pk:
-            # Если есть POST данные (пользователь отправил форму)
             if self.data:
+                # POST-запрос: обрабатываем отправленные данные
                 try:
                     type_id = int(self.data.get('type'))
                     self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
@@ -157,7 +173,7 @@ class TransactionForm(forms.ModelForm):
                     else:
                         self.fields['subcategory'].queryset = Subcategory.objects.none()
                 except (ValueError, TypeError, KeyError):
-                    # Если данные некорректны, используем старые значения из instance
+                    # При ошибке используем текущие значения из instance
                     if self.instance.type:
                         self.fields['category'].queryset = Category.objects.filter(
                             type=self.instance.type
@@ -169,7 +185,7 @@ class TransactionForm(forms.ModelForm):
                         )
                         self.fields['subcategory'].empty_label = "---------"
             else:
-                # GET запрос - показываем форму со старыми значениями
+                # GET-запрос: загружаем форму с текущими значениями
                 if self.instance.type:
                     self.fields['category'].queryset = Category.objects.filter(
                         type=self.instance.type
@@ -181,8 +197,9 @@ class TransactionForm(forms.ModelForm):
                     )
                     self.fields['subcategory'].empty_label = "---------"
         else:
-            # Для новой транзакции
+            # Создание новой транзакции
             if self.data:
+                # POST-запрос: обрабатываем отправленные данные
                 try:
                     type_id = int(self.data.get('type'))
                     self.fields['category'].queryset = Category.objects.filter(type_id=type_id)
@@ -199,23 +216,28 @@ class TransactionForm(forms.ModelForm):
                     self.fields['category'].queryset = Category.objects.none()
                     self.fields['subcategory'].queryset = Subcategory.objects.none()
             else:
-                # GET запрос для создания - пустые querysets
+                # GET-запрос: пустая форма с пустыми зависимыми полями
                 self.fields['category'].queryset = Category.objects.none()
                 self.fields['subcategory'].queryset = Subcategory.objects.none()
 
     def clean(self):
+        """
+        Валидация иерархических зависимостей.
+
+        Проверяет:
+        - Категория должна принадлежать выбранному типу
+        - Подкатегория должна принадлежать выбранной категории
+        """
         cleaned_data = super().clean()
         type_obj = cleaned_data.get('type')
         category = cleaned_data.get('category')
         subcategory = cleaned_data.get('subcategory')
 
-        # Проверяем, что категория принадлежит выбранному типу
         if category and type_obj and category.type != type_obj:
             raise ValidationError(
                 'Категория должна принадлежать выбранному типу.'
             )
 
-        # Проверяем, что подкатегория принадлежит выбранной категории
         if subcategory and category and subcategory.category != category:
             raise ValidationError(
                 'Подкатегория должна принадлежать выбранной категории.'
@@ -224,8 +246,9 @@ class TransactionForm(forms.ModelForm):
         return cleaned_data
 
 
-# Формы для управления справочниками
 class StatusForm(forms.ModelForm):
+    """Форма для создания и редактирования статусов."""
+
     class Meta:
         model = Status
         fields = ['name', 'slug']
@@ -236,6 +259,8 @@ class StatusForm(forms.ModelForm):
 
 
 class TypeForm(forms.ModelForm):
+    """Форма для создания и редактирования типов операций."""
+
     class Meta:
         model = Type
         fields = ['name', 'slug']
@@ -246,6 +271,8 @@ class TypeForm(forms.ModelForm):
 
 
 class CategoryForm(forms.ModelForm):
+    """Форма для создания и редактирования категорий."""
+
     class Meta:
         model = Category
         fields = ['name', 'slug', 'type']
@@ -257,6 +284,8 @@ class CategoryForm(forms.ModelForm):
 
 
 class SubcategoryForm(forms.ModelForm):
+    """Форма для создания и редактирования подкатегорий."""
+
     class Meta:
         model = Subcategory
         fields = ['name', 'slug', 'category']
