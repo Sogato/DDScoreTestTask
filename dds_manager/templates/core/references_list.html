@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Управление справочниками - ДДС Менеджер{% endblock %}
+
+{% block content %}
+<h1><i class="bi bi-gear"></i> Управление справочниками</h1>
+
+<div class="row">
+    <!-- Статусы -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-tag"></i> Статусы</h5>
+                <a href="{% url 'status_create' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Добавить
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if statuses %}
+                    <div class="list-group list-group-flush">
+                        {% for status in statuses %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ status.name }}</span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'status_update' slug=status.slug %}"
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'status_delete' slug=status.slug %}"
+                                       class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card-body text-center text-muted">
+                        Статусы не созданы
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Типы -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-layers"></i> Типы</h5>
+                <a href="{% url 'type_create' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Добавить
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if types %}
+                    <div class="list-group list-group-flush">
+                        {% for type in types %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ type.name }}</span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'type_update' slug=type.slug %}"
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'type_delete' slug=type.slug %}"
+                                       class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card-body text-center text-muted">
+                        Типы не созданы
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Категории -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-folder"></i> Категории</h5>
+                <a href="{% url 'category_create' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Добавить
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if categories %}
+                    <div class="list-group list-group-flush">
+                        {% for category in categories %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div>{{ category.name }}</div>
+                                    <small class="text-muted">Тип: {{ category.type.name }}</small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'category_update' slug=category.slug %}"
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'category_delete' slug=category.slug %}"
+                                       class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card-body text-center text-muted">
+                        Категории не созданы
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Подкатегории -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-folder2"></i> Подкатегории</h5>
+                <a href="{% url 'subcategory_create' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus"></i> Добавить
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if subcategories %}
+                    <div class="list-group list-group-flush">
+                        {% for subcategory in subcategories %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div>{{ subcategory.name }}</div>
+                                    <small class="text-muted">Категория: {{ subcategory.category.name }}</small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'subcategory_update' slug=subcategory.slug %}"
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'subcategory_delete' slug=subcategory.slug %}"
+                                       class="btn btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card-body text-center text-muted">
+                        Подкатегории не созданы
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
